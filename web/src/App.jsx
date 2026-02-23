@@ -104,10 +104,13 @@ function App() {
                 <div style={{
                     width: '100%',
                     maxWidth: '420px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    borderRadius: '16px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 215, 130, 0.55)',
+                    borderRadius: '22px',
                     padding: '32px 24px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                    boxShadow: '0 18px 60px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.35)',
                     textAlign: 'center'
                 }}>
                     <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'center' }}>
