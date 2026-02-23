@@ -4,6 +4,7 @@
 export const ASSET = {
     goal: (filename, size = 256) => `/assets/icons/goals/${size}/${filename}`,
     badge: (filename, size = 256) => `/assets/icons/badges/${size}/${filename}`,
+    bg: (filename) => `/assets/bg/ui/${filename}`,
     mascot: (filename, size = 256) => `/assets/mascot/${size}/${filename}`,
     logo: (filename = "logo_main.png") => `/assets/logo/${filename}`,
 };
@@ -78,6 +79,18 @@ export const MASCOT_FILES = [
     "mascot_sad.png",
     "mascot_stats.png",
     "mascot_think.png",
+];
+
+// Backgrounds
+export const BG_FILES = [
+    "bg_ui_circle_roundtable.jpg",
+    "bg_ui_contribute_night_path.jpg",
+    "bg_ui_goal_island_day.jpg",
+    "bg_ui_goals_garage.jpg",
+    "bg_ui_home_sunrise.jpg",
+    "bg_ui_journey_path_day.jpg",
+    "bg_ui_profile_social_view.jpg",
+    "bg_ui_statistics_room.jpg",
 ];
 
 // Logo
