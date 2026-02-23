@@ -115,13 +115,7 @@ function App() {
                 }}>
                     <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'center' }}>
                         <div style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.55)',
-                            backdropFilter: 'blur(6px)',
-                            WebkitBackdropFilter: 'blur(6px)', // Safari support
-                            border: '1px solid rgba(255, 255, 255, 0.45)',
-                            borderRadius: '999px',
                             padding: '14px 18px',
-                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.18)',
                             display: 'inline-block'
                         }}>
                             <img
@@ -129,10 +123,11 @@ function App() {
                                 alt="AlcanciApp Logo"
                                 style={{
                                     width: '100%',
-                                    maxWidth: '180px',
-                                    minWidth: '150px',
+                                    maxWidth: '240px',
+                                    minWidth: '180px',
                                     height: 'auto',
-                                    display: 'block'
+                                    display: 'block',
+                                    filter: 'drop-shadow(0 14px 30px rgba(0,0,0,0.35)) drop-shadow(0 0 18px rgba(255, 210, 90, 0.45))'
                                 }}
                             />
                         </div>
