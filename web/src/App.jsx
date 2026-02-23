@@ -97,17 +97,17 @@ function App() {
     }, [])
 
     if (currentView === 'login') {
-        const bgGradient = 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 60%, rgba(10,12,20,0.65) 100%)'
+        const bgGradient = 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 60%, rgba(10,12,20,0.85) 100%)'
         const bgImage = 'url(/assets/bg/ui/bg_ui_home_sunrise.jpg)'
 
         return (
             <div style={{
                 minHeight: '100vh',
                 backgroundImage: `${bgGradient}, ${bgImage}`,
-                backgroundSize: isDesktop ? 'auto 1000px' : 'cover',
+                backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: isDesktop ? 'center top' : 'center',
-                backgroundColor: isDesktop ? 'rgba(10,12,20,0.65)' : 'transparent', // fallback final color
+                backgroundColor: isDesktop ? 'rgba(10,12,20,0.85)' : 'transparent', // fallback final color
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
