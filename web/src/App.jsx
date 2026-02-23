@@ -88,13 +88,26 @@ function App() {
         color: '#444'
     }
 
+    const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768)
+
+    useEffect(() => {
+        const handleResize = () => setIsDesktop(window.innerWidth >= 768)
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
     if (currentView === 'login') {
+        const bgGradient = 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 60%, rgba(10,12,20,0.65) 100%)'
+        const bgImage = 'url(/assets/bg/ui/bg_ui_home_sunrise.jpg)'
+
         return (
             <div style={{
                 minHeight: '100vh',
-                backgroundImage: 'url(/assets/bg/ui/bg_ui_home_sunrise.jpg)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                backgroundImage: `${bgGradient}, ${bgImage}`,
+                backgroundSize: isDesktop ? 'auto 1000px' : 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: isDesktop ? 'center top' : 'center',
+                backgroundColor: isDesktop ? 'rgba(10,12,20,0.65)' : 'transparent', // fallback final color
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
