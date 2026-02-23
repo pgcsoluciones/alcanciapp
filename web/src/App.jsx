@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import { ASSET } from './lib/assets.js'
+
 function App() {
     const [apiStatus, setApiStatus] = useState('Conectando...')
     // Vista actual: 'dashboard' o 'createGoal'
@@ -69,6 +71,13 @@ function App() {
     }
     return (
         <div style={{ maxWidth: '480px', margin: '0 auto', padding: '16px', fontFamily: 'sans-serif' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                <img
+                    src={ASSET.logo()}
+                    alt="AlcanciApp"
+                    style={{ width: '120px', height: 'auto' }}
+                />
+            </div>
             <h1>AlcanciApp (Web)</h1>
             {currentView === 'dashboard' ? (
                 // --- VISTA DASHBOARD (Mantiene el código exacto antes pedido) ---
