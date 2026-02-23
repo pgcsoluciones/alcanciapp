@@ -3,8 +3,14 @@ import { ASSET } from './lib/assets.js'
 
 function App() {
     const [apiStatus, setApiStatus] = useState('Conectando...')
-    // Vista actual: 'dashboard' o 'createGoal'
-    const [currentView, setCurrentView] = useState('dashboard')
+    // Vista actual: 'login', 'dashboard' o 'createGoal'
+    const [currentView, setCurrentView] = useState('login')
+
+    // Estado del login
+    const [loginEmail, setLoginEmail] = useState('')
+    const [loginPassword, setLoginPassword] = useState('')
+    const [loginError, setLoginError] = useState('')
+
     // Estado del formulario
     const [goalName, setGoalName] = useState('')
     const [goalDuration, setGoalDuration] = useState('1')
@@ -28,6 +34,18 @@ function App() {
                 setApiStatus('Error conectando con API')
             })
     }, [])
+
+    // --- MANEJADORES DE LOGIN ---
+    const handleLogin = (e) => {
+        e.preventDefault()
+        setLoginError('')
+        if (!loginEmail.trim() || !loginPassword.trim()) {
+            setLoginError('Por favor ingresa correo y contraseña.')
+            return
+        }
+        // Simulación de Auth
+        setCurrentView('dashboard')
+    }
     const handleSaveGoal = (e) => {
         e.preventDefault()
         setFormError('')
@@ -69,6 +87,109 @@ function App() {
         fontSize: '14px',
         color: '#444'
     }
+
+    if (currentView === 'login') {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                backgroundImage: 'url(/assets/bg/ui/bg_ui_home_sunrise.jpg)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                fontFamily: 'sans-serif'
+            }}>
+                <div style={{
+                    width: '100%',
+                    maxWidth: '420px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '16px',
+                    padding: '32px 24px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                    textAlign: 'center'
+                }}>
+                    <div style={{ marginBottom: '24px' }}>
+                        <img
+                            src={ASSET.logo()}
+                            alt="AlcanciApp Logo"
+                            style={{ width: '100px', height: 'auto', margin: '0 auto' }}
+                        />
+                    </div>
+
+                    <h2 style={{ fontSize: '22px', marginBottom: '24px', color: '#333' }}>Bienvenido de nuevo</h2>
+
+                    <form onSubmit={handleLogin} style={{ textAlign: 'left' }}>
+                        <label style={labelStyle}>Correo electrónico</label>
+                        <input
+                            type="email"
+                            style={inputStyle}
+                            placeholder="tu@correo.com"
+                            value={loginEmail}
+                            onChange={(e) => setLoginEmail(e.target.value)}
+                        />
+
+                        <label style={labelStyle}>Contraseña</label>
+                        <input
+                            type="password"
+                            style={inputStyle}
+                            placeholder="••••••••"
+                            value={loginPassword}
+                            onChange={(e) => setLoginPassword(e.target.value)}
+                        />
+
+                        {loginError && (
+                            <p style={{ color: 'red', fontSize: '14px', marginBottom: '16px', textAlign: 'center', fontWeight: 'bold' }}>
+                                {loginError}
+                            </p>
+                        )}
+
+                        <button
+                            type="submit"
+                            style={{
+                                width: '100%',
+                                padding: '16px',
+                                backgroundColor: '#4CAF50',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
+                                minHeight: '44px',
+                                marginBottom: '16px',
+                                cursor: 'pointer'
+                            }}>
+                            INICIAR SESIÓN
+                        </button>
+                    </form>
+
+                    <button
+                        type="button"
+                        style={{
+                            width: '100%',
+                            padding: '16px',
+                            backgroundColor: 'transparent',
+                            color: '#4CAF50',
+                            border: '2px solid #4CAF50',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            minHeight: '44px',
+                            marginBottom: '16px',
+                            cursor: 'pointer'
+                        }}>
+                        CREAR CUENTA
+                    </button>
+
+                    <a href="#" style={{ color: '#666', fontSize: '14px', textDecoration: 'none' }}>
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div style={{ maxWidth: '480px', margin: '0 auto', padding: '16px', fontFamily: 'sans-serif' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
