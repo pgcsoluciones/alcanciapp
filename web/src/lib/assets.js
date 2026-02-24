@@ -7,6 +7,26 @@ export const ASSET = {
     bg: (filename) => `/assets/bg/ui/${filename}`,
     mascot: (filename, size = 256) => `/assets/mascot/${size}/${filename}`,
     logo: (filename = "logo_main.png") => `/assets/logo/${filename}`,
+    ui: {
+        bannerRibbonTop: () => '/assets/ui/banners/banner_ribbon_top.png',
+        bannerRibbonPlaque: () => '/assets/ui/banners/banner_ribbon_plaque.png',
+        btnPrimaryGreenPlatform: () => '/assets/ui/buttons/btn_primary_green_platform.png',
+        roundArrowLeft: () => '/assets/ui/buttons/round_arrow_left.png',
+        roundArrowRight: () => '/assets/ui/buttons/round_arrow_right.png',
+        roundGemGreenA: () => '/assets/ui/buttons/round_gem_green_a.png',
+        roundGemGreenB: () => '/assets/ui/buttons/round_gem_green_b.png',
+        pillBeige: () => '/assets/ui/buttons/pill_beige.png',
+        pillBrown: () => '/assets/ui/buttons/pill_brown.png',
+        pillDark: () => '/assets/ui/buttons/pill_dark.png',
+        pillGold: () => '/assets/ui/buttons/pill_gold.png',
+        pillGray: () => '/assets/ui/buttons/pill_gray.png',
+        pillGreen: () => '/assets/ui/buttons/pill_green.png',
+        pillRed: () => '/assets/ui/buttons/pill_red.png',
+        cardPanelSquareGold: () => '/assets/ui/cards/panel_square_gold.png',
+        cardPlatformStoneBlue: () => '/assets/ui/cards/platform_stone_blue.png',
+        cardScrollParchment: () => '/assets/ui/cards/scroll_parchment.png',
+        cardFrameGoldCoins: () => '/assets/ui/cards/frame_gold_coins.png',
+    }
 };
 
 // ---------- Existing files (DO NOT RENAME) ----------
