@@ -76,9 +76,10 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
     return (
         <div style={{
             minHeight: '100vh',
-            backgroundImage: `url('${ASSET.bg('bg_ui_goal_island_day.jpg')}')`,
+            backgroundImage: `linear-gradient(to bottom, rgba(230,240,255,0.2) 0%, rgba(200,225,250,0.6) 100%), url('${ASSET.bg('bg_ui_goal_island_day.jpg')}')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
             backgroundRepeat: 'no-repeat',
             display: 'flex',
             flexDirection: 'column',
@@ -87,73 +88,79 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
             boxSizing: 'border-box',
             position: 'relative',
             width: '100%',
-            maxWidth: '480px', // Mobile first constraint
+            maxWidth: '430px', // Mobile constraint hasta 430px según user
             margin: '0 auto'
         }}>
 
-            {/* Botón volver discreto (OPCIONAL) */}
-            {onBack && (
-                <button
-                    onClick={onBack}
-                    style={{
-                        position: 'absolute',
-                        top: '16px',
-                        left: '16px',
-                        background: 'white',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        cursor: 'pointer',
-                        zIndex: 10
-                    }}
-                >
-                    ←
-                </button>
-            )}
-
-            {/* Header Plaque */}
+            {/* Header / Botón Volver */}
             <div style={{
-                position: 'relative',
                 width: '100%',
-                maxWidth: '320px',
-                marginTop: '20px',
-                marginBottom: '24px',
                 display: 'flex',
-                flexDirection: 'column',
+                justifyContent: 'center',
                 alignItems: 'center',
-                justifyContent: 'center'
+                position: 'relative',
+                marginBottom: '20px'
             }}>
-                <img
-                    src={ASSET.ui.bannerRibbonPlaque()}
-                    alt="Banner"
-                    style={{ width: '100%', height: 'auto', display: 'block' }}
-                />
+                {onBack && (
+                    <button
+                        onClick={onBack}
+                        style={{
+                            position: 'absolute',
+                            left: '0',
+                            background: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            zIndex: 10
+                        }}
+                    >
+                        <img
+                            src={ASSET.ui.roundArrowLeft()}
+                            alt="Volver"
+                            style={{ width: '44px', height: '44px', display: 'block' }}
+                        />
+                    </button>
+                )}
+
+                {/* Header Plaque */}
                 <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center',
-                    width: '80%'
+                    position: 'relative',
+                    width: '100%',
+                    maxWidth: '280px', // Un poco más ajustado para dejar espacio al botón back
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}>
-                    <h1 style={{
-                        color: 'white',
-                        fontSize: '18px',
-                        margin: '0 0 4px 0',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
-                    }}>Establecer Metas</h1>
-                    <p style={{
-                        color: '#f0f0f0',
-                        fontSize: '12px',
-                        margin: 0,
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                        lineHeight: '1.2'
-                    }}>Elige una Meta para Comenzar tu Ahorro</p>
+                    <img
+                        src={ASSET.ui.bannerRibbonPlaque()}
+                        alt="Banner"
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                    />
+                    <div style={{
+                        position: 'absolute',
+                        top: '46%', // Ajuste vertical manual según imagen Plaque
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center',
+                        width: '85%'
+                    }}>
+                        <h1 style={{
+                            color: 'white',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            fontFamily: 'serif',
+                            margin: '0 0 2px 0',
+                            textShadow: '1px 2px 3px rgba(0,0,0,0.6)'
+                        }}>Establecer Metas</h1>
+                        <p style={{
+                            color: '#fff9e6',
+                            fontSize: '11px',
+                            margin: 0,
+                            textShadow: '1px 1px 2px rgba(0,0,0,0.6)',
+                            lineHeight: '1.2'
+                        }}>Elige una Meta para Comenzar tu Ahorro</p>
+                    </div>
                 </div>
             </div>
 
@@ -163,9 +170,8 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '12px',
                 width: '100%',
-                maxWidth: '340px',
+                maxWidth: '380px',
                 marginBottom: '24px',
-                // Evitamos overflow horizontal
                 boxSizing: 'border-box'
             }}>
                 {goalTypes.map(goal => (
@@ -179,19 +185,22 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 ))}
             </div>
 
-            {/* Form Controls */}
+            {/* Form Controls - Blur Panel */}
             <div style={{
                 width: '100%',
-                maxWidth: '340px',
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                borderRadius: '16px',
-                padding: '20px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                marginBottom: '24px',
+                maxWidth: '380px',
+                backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                borderRadius: '20px',
+                padding: '24px 20px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.5)',
+                marginBottom: '30px',
                 boxSizing: 'border-box'
             }}>
-                <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#444', marginBottom: '8px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontSize: '15px', fontWeight: 'bold', color: '#444', marginBottom: '8px' }}>
                         Monto Objetivo (RD$)
                     </label>
                     <input
@@ -201,83 +210,104 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                         placeholder="Ej. 50000"
                         style={{
                             width: '100%',
-                            padding: '12px',
-                            borderRadius: '8px',
-                            border: '1px solid #ccc',
-                            fontSize: '16px',
-                            boxSizing: 'border-box'
+                            padding: '14px',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(0,0,0,0.1)',
+                            backgroundColor: 'rgba(255,255,255,0.9)',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            color: '#333',
+                            textAlign: 'center',
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
                         }}
                     />
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#444', marginBottom: '8px' }}>
+                    <label style={{ display: 'block', fontSize: '15px', fontWeight: 'bold', color: '#444', marginBottom: '12px' }}>
                         Plazo (Meses)
                     </label>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
-                        {[3, 6, 12].map(months => (
-                            <button
-                                key={months}
-                                onClick={() => setDurationMonths(months)}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px 0',
-                                    borderRadius: '20px',
-                                    border: durationMonths === months ? '2px solid #4CAF50' : '1px solid #ccc',
-                                    backgroundColor: durationMonths === months ? '#E8F5E9' : 'white',
-                                    color: durationMonths === months ? '#2E7D32' : '#666',
-                                    fontWeight: durationMonths === months ? 'bold' : 'normal',
-                                    fontSize: '14px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                {months}
-                            </button>
-                        ))}
+                        {[3, 6, 12].map(months => {
+                            const selected = durationMonths === months;
+                            return (
+                                <button
+                                    key={months}
+                                    onClick={() => setDurationMonths(months)}
+                                    style={{
+                                        flex: 1,
+                                        height: '44px',
+                                        backgroundImage: selected ? `url('${ASSET.ui.pill_green()}')` : 'none',
+                                        backgroundColor: selected ? 'transparent' : 'rgba(255,255,255,0.8)',
+                                        backgroundSize: '100% 100%', // Stretch the pill image if needed, or cover
+                                        backgroundPosition: 'center',
+                                        backgroundRepeat: 'no-repeat',
+                                        border: selected ? 'none' : '1px solid #ccc',
+                                        borderRadius: '22px', // fallback if pill isn't perfectly masking
+                                        color: selected ? 'white' : '#666',
+                                        fontWeight: 'bold',
+                                        fontSize: '15px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: selected ? '0 4px 8px rgba(76, 175, 80, 0.4)' : 'none',
+                                        textShadow: selected ? '1px 1px 2px rgba(0,0,0,0.3)' : 'none'
+                                    }}
+                                >
+                                    {months}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
                 {errorMsg && (
-                    <p style={{ color: '#d32f2f', fontSize: '13px', marginTop: '16px', textAlign: 'center', fontWeight: 'bold' }}>
+                    <p style={{ color: '#d32f2f', fontSize: '14px', marginTop: '16px', textAlign: 'center', fontWeight: 'bold' }}>
                         {errorMsg}
                     </p>
                 )}
             </div>
 
-            {/* Button Create - Usando la imagen btnPrimaryGreenPlatform de fondo */}
-            <button
-                onClick={handleCreateGoal}
-                disabled={isLoading}
-                style={{
-                    width: '100%',
-                    maxWidth: '300px',
-                    height: '60px', // Altura aproximada de la imagen
-                    backgroundImage: `url('${ASSET.ui.btnPrimaryGreenPlatform()}')`,
-                    backgroundSize: 'contain',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    opacity: isLoading ? 0.7 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '40px', // Padding fín de pantalla
-                    transition: 'transform 0.1s active'
-                }}
-            >
-                <span style={{
-                    color: 'white',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                    marginTop: '-4px' // Pequeño ajuste visual para que quede centrado respecto a la sombra del botón
-                }}>
-                    {isLoading ? 'Creando...' : 'Crear Meta'}
-                </span>
-            </button>
+            {/* Button Create */}
+            <div style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                marginBottom: '40px'
+            }}>
+                <button
+                    onClick={handleCreateGoal}
+                    disabled={isLoading}
+                    style={{
+                        width: '100%',
+                        maxWidth: '280px',
+                        height: '75px', // Altura mayor para btnPrimaryGreenPlatform real look
+                        backgroundImage: `url('${ASSET.ui.btnPrimaryGreenPlatform()}')`,
+                        backgroundSize: '100% 100%',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        opacity: isLoading ? 0.7 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingBottom: '8px', // offset porque estos assets tienen el text-area más arriba debido a la sombra de la base
+                        transition: 'transform 0.1s active'
+                    }}
+                >
+                    <span style={{
+                        color: 'white',
+                        fontSize: '20px',
+                        fontWeight: 'bold',
+                        textShadow: '1px 2px 4px rgba(0,0,0,0.5)'
+                    }}>
+                        {isLoading ? 'Creando...' : 'Crear Meta'}
+                    </span>
+                </button>
+            </div>
 
         </div>
     );

@@ -9,21 +9,21 @@ const GoalTypeCard = ({ title, imageSrc, isSelected, onClick }) => {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '12px',
-                margin: '6px',
-                backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.1)' : 'white',
+                padding: '16px',
+                margin: '8px',
+                backgroundColor: isSelected ? 'rgba(76, 175, 80, 0.15)' : 'white',
                 border: isSelected ? '2px solid #4CAF50' : '2px solid transparent',
-                borderRadius: '16px',
-                boxShadow: isSelected ? '0 0 10px rgba(76, 175, 80, 0.5)' : '0 4px 6px rgba(0,0,0,0.05)',
+                borderRadius: '20px',
+                boxShadow: isSelected ? '0 0 15px rgba(76, 175, 80, 0.6)' : '0 6px 12px rgba(0,0,0,0.08)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease-in-out',
                 width: '100%',
-                maxWidth: '140px',
+                maxWidth: '160px',
                 aspectRatio: '1',
                 boxSizing: 'border-box'
             }}
         >
-            <div style={{ width: '64px', height: '64px', marginBottom: '8px' }}>
+            <div style={{ width: '74px', height: '74px', marginBottom: '12px' }}>
                 <img
                     src={imageSrc}
                     alt={title}
@@ -31,9 +31,9 @@ const GoalTypeCard = ({ title, imageSrc, isSelected, onClick }) => {
                 />
             </div>
             <span style={{
-                fontSize: '14px',
+                fontSize: '15px',
                 fontWeight: isSelected ? 'bold' : 'normal',
-                color: isSelected ? '#4CAF50' : '#333',
+                color: isSelected ? '#4CAF50' : '#444',
                 textAlign: 'center'
             }}>
                 {title}

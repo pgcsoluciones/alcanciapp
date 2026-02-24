@@ -8,7 +8,9 @@ export const ASSET = {
     logo: (filename = "logo_main.png") => `/assets/logo/${filename}`,
     ui: {
         bannerRibbonPlaque: () => `/assets/ui/banner_ribbon_plaque.png`,
-        btnPrimaryGreenPlatform: () => `/assets/ui/btn_primary_green_platform.png`
+        btnPrimaryGreenPlatform: () => `/assets/ui/btn_primary_green_platform.png`,
+        roundArrowLeft: () => `/assets/ui/buttons/round_arrow_left.png`,
+        pill_green: () => `/assets/ui/buttons/pill_green.png`
     },
     bg: (filename) => `/assets/ui/${filename}`
 };
