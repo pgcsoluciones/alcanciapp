@@ -10,7 +10,11 @@ export const ASSET = {
         bannerRibbonPlaque: () => `/assets/ui/banner_ribbon_plaque.png`,
         btnPrimaryGreenPlatform: () => `/assets/ui/btn_primary_green_platform.png`,
         roundArrowLeft: () => `/assets/ui/buttons/round_arrow_left.png`,
-        pill_green: () => `/assets/ui/buttons/pill_green.png`
+        pill_green: () => `/assets/ui/buttons/pill_green.png`,
+        pill_beige: () => `/assets/ui/buttons/pill_beige.png`,
+        pill_brown: () => `/assets/ui/buttons/pill_brown.png`,
+        panelSquareGold: () => `/assets/ui/cards/panel_square_gold.png`,
+        scrollParchment: () => `/assets/ui/cards/scroll_parchment.png`
     },
     bg: (filename) => `/assets/ui/${filename}`
 };

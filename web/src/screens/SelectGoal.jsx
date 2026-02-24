@@ -76,7 +76,8 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
     return (
         <div style={{
             minHeight: '100vh',
-            backgroundImage: `linear-gradient(to bottom, rgba(230,240,255,0.2) 0%, rgba(200,225,250,0.6) 100%), url('${ASSET.bg('bg_ui_goal_island_day.jpg')}')`,
+            // Overlay gradient suave (oscuro 18% arriba, 28% abajo) seguido de la imagen real estática sin repetir
+            backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.28) 100%), url('${ASSET.bg('bg_ui_goal_island_day.jpg')}')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed',
@@ -126,38 +127,54 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 <div style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: '280px', // Un poco más ajustado para dejar espacio al botón back
+                    maxWidth: '340px', // Un poco más amplio
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.3))'
                 }}>
                     <img
                         src={ASSET.ui.bannerRibbonPlaque()}
                         alt="Banner"
                         style={{ width: '100%', height: 'auto', display: 'block' }}
                     />
+
+                    {/* Título en el ribbon rojo */}
                     <div style={{
                         position: 'absolute',
-                        top: '46%', // Ajuste vertical manual según imagen Plaque
+                        top: '18%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center',
+                        width: '90%'
+                    }}>
+                        <h1 style={{
+                            color: 'white',
+                            fontSize: '22px',
+                            fontWeight: '900',
+                            fontFamily: 'system-ui, sans-serif',
+                            margin: '0',
+                            textShadow: '0px 2px 3px rgba(0,0,0,0.6), 0px -1px 2px rgba(150,0,0,0.6)',
+                            WebkitTextStroke: '0.5px #600'
+                        }}>Establecer Metas</h1>
+                    </div>
+
+                    {/* Subtítulo en la madera */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '68%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
                         textAlign: 'center',
                         width: '85%'
                     }}>
-                        <h1 style={{
-                            color: 'white',
-                            fontSize: '18px',
-                            fontWeight: 'bold',
-                            fontFamily: 'serif',
-                            margin: '0 0 2px 0',
-                            textShadow: '1px 2px 3px rgba(0,0,0,0.6)'
-                        }}>Establecer Metas</h1>
                         <p style={{
-                            color: '#fff9e6',
-                            fontSize: '11px',
+                            color: '#5a3d2b', // Marrón oscuro como en la madera
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            fontFamily: 'system-ui, sans-serif',
                             margin: 0,
-                            textShadow: '1px 1px 2px rgba(0,0,0,0.6)',
                             lineHeight: '1.2'
                         }}>Elige una Meta para Comenzar tu Ahorro</p>
                     </div>
@@ -168,10 +185,11 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '12px',
+                gap: '16px',
                 width: '100%',
-                maxWidth: '380px',
-                marginBottom: '24px',
+                maxWidth: '430px', // Ocupar casi todo el espacio
+                padding: '0 8px',
+                marginBottom: '28px',
                 boxSizing: 'border-box'
             }}>
                 {goalTypes.map(goal => (
@@ -185,24 +203,30 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 ))}
             </div>
 
-            {/* Form Controls - Blur Panel */}
+            {/* Form Controls - Panel de Pergamino */}
             <div style={{
                 width: '100%',
-                maxWidth: '380px',
-                backgroundColor: 'rgba(255, 255, 255, 0.75)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                borderRadius: '20px',
-                padding: '24px 20px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                border: '1px solid rgba(255,255,255,0.5)',
-                marginBottom: '30px',
-                boxSizing: 'border-box'
+                maxWidth: '430px',
+                backgroundImage: `url('${ASSET.ui.scrollParchment()}')`,
+                backgroundSize: '100% 100%', // Stretch sin romper esquinas (el pergamino es flexible centralmente)
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                backgroundColor: 'transparent',
+                padding: '36px 32px', // Mayor padding para salvar pliegues del scroll
+                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))',
+                marginBottom: '20px',
+                boxSizing: 'border-box',
+                position: 'relative'
             }}>
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', fontSize: '15px', fontWeight: 'bold', color: '#444', marginBottom: '8px' }}>
-                        Monto Objetivo (RD$)
-                    </label>
+                <div style={{ marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(90,61,43,0.3), transparent)', flex: 1 }}></div>
+                        <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#5a3d2b', padding: '0 12px', textAlign: 'center' }}>
+                            Propósito de Ahorro
+                        </label>
+                        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(90,61,43,0.3), transparent)', flex: 1 }}></div>
+                    </div>
+
                     <input
                         type="number"
                         value={targetAmount}
@@ -210,25 +234,30 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                         placeholder="Ej. 50000"
                         style={{
                             width: '100%',
-                            padding: '14px',
-                            borderRadius: '12px',
-                            border: '1px solid rgba(0,0,0,0.1)',
-                            backgroundColor: 'rgba(255,255,255,0.9)',
-                            fontSize: '18px',
-                            fontWeight: 'bold',
-                            color: '#333',
+                            padding: '16px',
+                            borderRadius: '16px',
+                            border: 'none',
+                            backgroundColor: 'rgba(255,250,240,0.6)',
+                            fontSize: '26px',
+                            fontWeight: '900',
+                            color: '#4a2f1c',
                             textAlign: 'center',
                             boxSizing: 'border-box',
                             outline: 'none',
-                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
+                            boxShadow: 'inset 0 4px 6px rgba(0,0,0,0.2), 0 2px 2px rgba(255,255,255,0.7)'
                         }}
                     />
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontSize: '15px', fontWeight: 'bold', color: '#444', marginBottom: '12px' }}>
-                        Plazo (Meses)
-                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(90,61,43,0.3), transparent)', flex: 1 }}></div>
+                        <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#5a3d2b', padding: '0 12px', textAlign: 'center' }}>
+                            Plazo para la Meta
+                        </label>
+                        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(90,61,43,0.3), transparent)', flex: 1 }}></div>
+                    </div>
+
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
                         {[3, 6, 12].map(months => {
                             const selected = durationMonths === months;
@@ -238,24 +267,24 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                                     onClick={() => setDurationMonths(months)}
                                     style={{
                                         flex: 1,
-                                        height: '44px',
-                                        backgroundImage: selected ? `url('${ASSET.ui.pill_green()}')` : 'none',
-                                        backgroundColor: selected ? 'transparent' : 'rgba(255,255,255,0.8)',
-                                        backgroundSize: '100% 100%', // Stretch the pill image if needed, or cover
+                                        height: '54px', // Tamaño más grande y de aspecto madera/verde
+                                        backgroundImage: `url('${selected ? ASSET.ui.pill_green() : ASSET.ui.pill_brown()}')`,
+                                        backgroundColor: 'transparent',
+                                        backgroundSize: '100% 100%',
                                         backgroundPosition: 'center',
                                         backgroundRepeat: 'no-repeat',
-                                        border: selected ? 'none' : '1px solid #ccc',
-                                        borderRadius: '22px', // fallback if pill isn't perfectly masking
-                                        color: selected ? 'white' : '#666',
-                                        fontWeight: 'bold',
-                                        fontSize: '15px',
+                                        border: 'none',
+                                        color: selected ? 'white' : '#fff0d4',
+                                        fontWeight: '800',
+                                        fontSize: '16px',
                                         cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        boxShadow: selected ? '0 4px 8px rgba(76, 175, 80, 0.4)' : 'none',
-                                        textShadow: selected ? '1px 1px 2px rgba(0,0,0,0.3)' : 'none'
+                                        transition: 'all 0.1s',
+                                        filter: selected ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))' : 'drop-shadow(0 2px 3px rgba(0,0,0,0.4))',
+                                        textShadow: selected ? '1px 2px 2px rgba(0,80,0,0.6)' : '1px 2px 2px rgba(0,0,0,0.8)',
+                                        transform: selected ? 'translateY(1px)' : 'none'
                                     }}
                                 >
-                                    {months}
+                                    {months} Meses
                                 </button>
                             );
                         })}
@@ -274,15 +303,15 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 width: '100%',
                 display: 'flex',
                 justifyContent: 'center',
-                marginBottom: '40px'
+                marginBottom: '60px'
             }}>
                 <button
                     onClick={handleCreateGoal}
                     disabled={isLoading}
                     style={{
                         width: '100%',
-                        maxWidth: '280px',
-                        height: '75px', // Altura mayor para btnPrimaryGreenPlatform real look
+                        maxWidth: '320px', // Un poco más ancho coherente a la imagen
+                        height: '84px', // Altura mayor
                         backgroundImage: `url('${ASSET.ui.btnPrimaryGreenPlatform()}')`,
                         backgroundSize: '100% 100%',
                         backgroundPosition: 'center',
@@ -294,15 +323,17 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        paddingBottom: '8px', // offset porque estos assets tienen el text-area más arriba debido a la sombra de la base
-                        transition: 'transform 0.1s active'
+                        paddingBottom: '12px', // offset para la sombra inferiorde la base de la plataforma
+                        transition: 'transform 0.1s active',
+                        filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.3))'
                     }}
                 >
                     <span style={{
                         color: 'white',
-                        fontSize: '20px',
-                        fontWeight: 'bold',
-                        textShadow: '1px 2px 4px rgba(0,0,0,0.5)'
+                        fontSize: '26px',
+                        fontWeight: '900',
+                        fontFamily: 'system-ui, sans-serif',
+                        textShadow: '0px 2px 4px rgba(0,0,0,0.6), 0px -1px 1px rgba(0,100,0,0.8)'
                     }}>
                         {isLoading ? 'Creando...' : 'Crear Meta'}
                     </span>
