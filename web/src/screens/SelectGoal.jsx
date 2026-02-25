@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import GoalTypeCard from '../components/GoalTypeCard';
 import { ASSET } from '../lib/assets.js';
+import { API_BASE_URL } from '../lib/config.js';
 
 const goalTypes = [
     { id: 'vacation', title: 'Viaje', image: ASSET.goal('goal_vacation.png', 256) },
@@ -37,7 +38,7 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
 
             if (!token) {
                 // Intentar obtener token anónimo si no hay uno
-                const authRes = await fetch('https://alcanciapp-api.fliaprince.workers.dev/api/v1/auth/anonymous', {
+                const authRes = await fetch(`${API_BASE_URL}/api/v1/auth/anonymous`, {
                     method: 'POST'
                 });
                 const authData = await authRes.json();
@@ -60,7 +61,7 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 frequency: 'Mensual'
             };
 
-            const res = await fetch('https://alcanciapp-api.fliaprince.workers.dev/api/v1/goals', {
+            const res = await fetch(`${API_BASE_URL}/api/v1/goals`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

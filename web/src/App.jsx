@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import SelectGoal from './screens/SelectGoal'
+import { API_BASE_URL } from './lib/config.js'
 
 function App() {
     const [apiStatus, setApiStatus] = useState('Conectando...')
@@ -32,7 +33,7 @@ function App() {
     }, [])
 
     useEffect(() => {
-        fetch('https://alcanciapp-api.fliaprince.workers.dev/health')
+        fetch(`${API_BASE_URL}/health`)
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
