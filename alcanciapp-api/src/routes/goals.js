@@ -3,7 +3,7 @@ import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
 
 export async function handleGoals(request, env) {
-    const corsHeaders = getCorsHeaders(request, env);
+    const corsHeaders = getCorsHeaders(env);
 
     // 1. Aplicar Auth Middleware y recuperar `userId`
     const authResult = await authenticateUser(request, env);

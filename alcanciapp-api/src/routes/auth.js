@@ -3,7 +3,7 @@ import { sha256 } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
 
 export async function handleAnonymousAuth(request, env) {
-    const corsHeaders = getCorsHeaders(request, env);
+    const corsHeaders = getCorsHeaders(env);
 
     // Solo POST
     if (request.method !== 'POST') {

@@ -8,4 +8,4 @@ CORS_ORIGIN = "*"
 [[d1_databases]]
 binding = "DB"
 database_name = "alcanciapp-d1"
-database_id = "local-d1-placeholder" # Requerido localmente, se sobreescribe en prod
+database_id = "6f897661-718f-4b8a-9a62-c5ba951db869"

@@ -3,7 +3,7 @@ import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
 
 export async function handleTransactions(request, env) {
-    const corsHeaders = getCorsHeaders(request, env);
+    const corsHeaders = getCorsHeaders(env);
 
     // 1. Enforce Auth
     const authResult = await authenticateUser(request, env);

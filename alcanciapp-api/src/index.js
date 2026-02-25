@@ -13,7 +13,7 @@ export default {
         const path = url.pathname;
         const method = request.method;
 
-        const baseHeaders = { ...getCorsHeaders(request, env), "Content-Type": "application/json" };
+        const baseHeaders = { ...getCorsHeaders(env), "Content-Type": "application/json" };
 
         try {
             // ==========================================
@@ -21,7 +21,7 @@ export default {
             // ==========================================
             if (path === "/" && method === "GET") {
                 return new Response("AlcanciApp API is running", {
-                    headers: { ...getCorsHeaders(request, env), "Content-Type": "text/plain" }
+                    headers: { ...getCorsHeaders(env), "Content-Type": "text/plain" }
                 });
             }
 
