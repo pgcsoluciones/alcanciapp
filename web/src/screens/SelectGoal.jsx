@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import GoalTypeCard from '../components/GoalTypeCard';
-import { ASSET } from '../lib/assets';
+import { ASSET } from '../lib/assets.js';
 
 const goalTypes = [
     { id: 'vacation', title: 'Viaje', image: ASSET.goal('goal_vacation.png', 256) },

@@ -1,4 +1,5 @@
 import React from 'react';
+import { ASSET } from '../lib/assets.js';
 
 const GoalTypeCard = ({ title, imageSrc, isSelected, onClick }) => {
     return (
