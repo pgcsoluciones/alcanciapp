@@ -33,7 +33,21 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
 
         try {
             const selectedGoalData = goalTypes.find(g => g.id === selectedGoalId);
-            const token = localStorage.getItem('alcanciapp_token');
+            let token = localStorage.getItem('alcanciapp_token');
+
+            if (!token) {
+                // Intentar obtener token anónimo si no hay uno
+                const authRes = await fetch('https://alcanciapp-api.fliaprince.workers.dev/api/v1/auth/anonymous', {
+                    method: 'POST'
+                });
+                const authData = await authRes.json();
+                if (authData.ok && authData.data?.token) {
+                    token = authData.data.token;
+                    localStorage.setItem('alcanciapp_token', token);
+                } else {
+                    throw new Error('No se pudo establecer conexión segura (Token inválido).');
+                }
+            }
 
             // The backend expects specific fields. Adjust based on real API specs.
             // Default privacy and frequency since they aren't in this UI.
@@ -76,8 +90,8 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
     return (
         <div style={{
             minHeight: '100vh',
-            // Overlay gradient suave (oscuro 18% arriba, 28% abajo) seguido de la imagen real estática sin repetir
-            backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.28) 100%), url('${ASSET.bg('bg_ui_goal_island_day.jpg')}')`,
+            // Overlay gradient suave (oscuro 15% arriba, 25% abajo) seguido de la imagen real estática sin repetir
+            backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.25) 100%), url('${ASSET.bg('bg_ui_goal_island_day.jpg')}')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed',
@@ -127,25 +141,26 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 <div style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: '340px', // Un poco más amplio
+                    maxWidth: '360px', // Más amplio para no montar textos
+                    marginTop: '15px', // Bajar el banner un poco 
+                    minHeight: '110px', // Reservar alto fijo
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.3))'
+                    filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.4))'
                 }}>
                     <img
                         src={ASSET.ui.bannerRibbonPlaque()}
                         alt="Banner"
-                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                     />
 
                     {/* Título en el ribbon rojo */}
                     <div style={{
-                        position: 'absolute',
-                        top: '18%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
+                        position: 'relative',
+                        zIndex: 2,
+                        marginTop: '-18px', // Ajuste respecto al espacio real del ribbon
                         textAlign: 'center',
                         width: '90%'
                     }}>
@@ -162,16 +177,15 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
 
                     {/* Subtítulo en la madera */}
                     <div style={{
-                        position: 'absolute',
-                        top: '68%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
+                        position: 'relative',
+                        zIndex: 2,
+                        marginTop: '16px', // Espacio respecto al titulo
                         textAlign: 'center',
                         width: '85%'
                     }}>
                         <p style={{
                             color: '#5a3d2b', // Marrón oscuro como en la madera
-                            fontSize: '13px',
+                            fontSize: '14px',
                             fontWeight: 'bold',
                             fontFamily: 'system-ui, sans-serif',
                             margin: 0,
@@ -303,15 +317,16 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 width: '100%',
                 display: 'flex',
                 justifyContent: 'center',
-                marginBottom: '60px'
+                marginTop: 'auto', // Pegar al fondo ocupando espacio disponible
+                marginBottom: '20px'
             }}>
                 <button
                     onClick={handleCreateGoal}
                     disabled={isLoading}
                     style={{
-                        width: '100%',
-                        maxWidth: '320px', // Un poco más ancho coherente a la imagen
-                        height: '84px', // Altura mayor
+                        width: '94vw',
+                        maxWidth: '460px', // Crecimiento masivo
+                        height: '96px', // Altura mayor para que resalte
                         backgroundImage: `url('${ASSET.ui.btnPrimaryGreenPlatform()}')`,
                         backgroundSize: '100% 100%',
                         backgroundPosition: 'center',
