@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, TrendingUp, BarChart2, Bell, Share2, Users, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Zap, Award } from 'lucide-react';
-import ContributionForm from '../components/ContributionForm';
+import AporteModal from '../components/AporteModal';
 import { API_BASE_URL } from '../lib/config';
 import {
     getSuggestedQuota,
@@ -50,8 +50,14 @@ export default function GoalDetail({ goalId, onBack }) {
     const [goal, setGoal] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showModal, setShowModal] = useState(false);
     const [error, setError] = useState('');
+
+    const handleAporteSuccess = (newTx) => {
+        setTransactions(prev => [newTx, ...prev]);
+        setGoal(prev => ({ ...prev, total_saved: (Number(prev.total_saved) || 0) + Number(newTx.amount) }));
+        setShowModal(false);
+    };
 
     useEffect(() => { loadData(); }, [goalId]);
 
@@ -280,9 +286,14 @@ export default function GoalDetail({ goalId, onBack }) {
                 )}
 
                 {/* ─── CTA de Aporte ─── */}
-                <ContributionForm onSubmit={handleAporte} isLoading={isSubmitting} />
+                <button
+                    onClick={() => setShowModal(true)}
+                    style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '16px', padding: '18px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginTop: '16px', boxShadow: '0 4px 16px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                >
+                    💰 Registrar Aporte en mi Alcancía
+                </button>
 
-                {/* ─── Futuras funciones (Placeholders) ─── */}
+                {/* ─── Futuras funciones (Placeholders honestos) ─── */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px' }}>
                     {[
                         { Icon: BarChart2, label: 'Estadísticas' },
@@ -302,32 +313,58 @@ export default function GoalDetail({ goalId, onBack }) {
                     <h3 style={{ fontSize: '16px', color: '#111827', marginBottom: '14px', fontWeight: 'bold' }}>Historial de aportes</h3>
                     {transactions.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '28px 20px', background: 'white', borderRadius: '16px', color: '#6B7280', border: '1px dashed #D1D5DB', fontSize: '14px' }}>
-                            Aún no hay transacciones. ¡Realiza tu primer aporte!
+                            Aún no hay aportes. ¡El primero es el más importante!
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {transactions.map(tx => (
-                                <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '14px 16px', borderRadius: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', border: '1px solid #F3F4F6' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ background: '#ECFDF5', padding: '8px', borderRadius: '10px' }}>
-                                            <TrendingUp size={18} color="#059669" />
-                                        </div>
-                                        <div>
-                                            <div style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>Aporte</div>
-                                            <div style={{ color: '#9CA3AF', fontSize: '12px', marginTop: '1px' }}>
-                                                {new Date(tx.created_at || Date.now()).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                <div key={tx.id} style={{ background: 'white', padding: '14px 16px', borderRadius: '14px', border: '1px solid #F3F4F6', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ background: '#ECFDF5', padding: '8px', borderRadius: '10px' }}>
+                                                <TrendingUp size={18} color="#059669" />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>
+                                                    Aporte {tx.confirmed_physical ? '✅' : ''}
+                                                </div>
+                                                <div style={{ color: '#9CA3AF', fontSize: '12px', marginTop: '1px' }}>
+                                                    {new Date(tx.created_at || Date.now()).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div style={{ fontWeight: 'bold', color: '#059669', fontSize: '15px' }}>
+                                            +{fmtRD(tx.amount)}
+                                        </div>
                                     </div>
-                                    <div style={{ fontWeight: 'bold', color: '#059669', fontSize: '15px' }}>
-                                        +{fmtRD(tx.amount)}
-                                    </div>
+                                    {tx.note && (
+                                        <div style={{ marginTop: '8px', padding: '6px 10px', background: '#F9FAFB', borderRadius: '8px', fontSize: '12px', color: '#4B5563', fontStyle: 'italic' }}>
+                                            "{tx.note}"
+                                        </div>
+                                    )}
+                                    {tx.evidence_url && (
+                                        <div style={{ marginTop: '6px', fontSize: '11px', color: '#10B981', fontWeight: '600' }}>
+                                            📷 Evidencia adjunta
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* ─── Modal de Aporte ─── */}
+            {showModal && (
+                <AporteModal
+                    goalId={goalId}
+                    suggestedQuota={quota}
+                    onClose={() => setShowModal(false)}
+                    onSuccess={handleAporteSuccess}
+                />
+            )}
         </div>
     );
 }
+
+
