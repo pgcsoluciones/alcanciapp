@@ -3,7 +3,7 @@ import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
 
 export async function handleGoals(request, env) {
-    const corsHeaders = getCorsHeaders(env);
+    const corsHeaders = getCorsHeaders(request, env);
 
     // 1. Aplicar Auth Middleware y recuperar `userId`
     const authResult = await authenticateUser(request, env);
@@ -34,10 +34,13 @@ export async function handleGoals(request, env) {
             }
 
             const goalId = crypto.randomUUID();
+            // Soporte para target_amount proveniente de SelectGoal.jsx
+            const frontTarget = body.target_amount !== undefined ? body.target_amount : body.targetAmount;
+            const targetAmount = frontTarget ? Number(frontTarget) : null;
 
             const stmt = env.DB.prepare(
-                "INSERT INTO goals (id, user_id, name, duration_months, frequency, privacy) VALUES (?, ?, ?, ?, ?, ?)"
-            ).bind(goalId, userId, body.name, body.duration_months, body.frequency, body.privacy);
+                "INSERT INTO goals (id, user_id, name, duration_months, frequency, privacy, target_amount) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            ).bind(goalId, userId, body.name, body.duration_months, body.frequency, body.privacy, targetAmount);
 
             const result = await stmt.run();
             if (result.error) throw new Error("Db Error");
@@ -49,7 +52,8 @@ export async function handleGoals(request, env) {
                     name: body.name,
                     duration_months: body.duration_months,
                     frequency: body.frequency,
-                    privacy: body.privacy
+                    privacy: body.privacy,
+                    target_amount: targetAmount
                 }
             }), { status: 201, headers: baseHeaders });
         }
@@ -57,9 +61,15 @@ export async function handleGoals(request, env) {
 
         // [GET] /api/v1/goals -> LISTAR METAS DEL USUARIO
         if (method === 'GET' && pathSegments.length === 3) {
-            const { results } = await env.DB.prepare(
-                "SELECT * FROM goals WHERE user_id = ? ORDER BY created_at DESC"
-            ).bind(userId).all();
+            // Obtenemos los campos normales más el target_amount y sumatoria de total ahorrado
+            const { results } = await env.DB.prepare(`
+                SELECT 
+                    g.*,
+                    COALESCE((SELECT SUM(amount) FROM goal_transactions t WHERE t.goal_id = g.id), 0) as total_saved
+                FROM goals g
+                WHERE g.user_id = ? 
+                ORDER BY g.created_at DESC
+            `).bind(userId).all();
 
             return new Response(JSON.stringify({
                 ok: true,
@@ -71,9 +81,13 @@ export async function handleGoals(request, env) {
         // [GET] /api/v1/goals/:id -> LEER UNA META
         if (method === 'GET' && pathSegments.length === 4) {
             const goalId = pathSegments[3];
-            const goal = await env.DB.prepare(
-                "SELECT * FROM goals WHERE id = ? AND user_id = ?"
-            ).bind(goalId, userId).first();
+            const goal = await env.DB.prepare(`
+                SELECT 
+                    g.*,
+                    COALESCE((SELECT SUM(amount) FROM goal_transactions t WHERE t.goal_id = g.id), 0) as total_saved
+                FROM goals g
+                WHERE g.id = ? AND g.user_id = ?
+            `).bind(goalId, userId).first();
 
             if (!goal) {
                 return new Response(JSON.stringify({ ok: false, error: "Meta no encontrada o no pertenece al usuario" }), {
