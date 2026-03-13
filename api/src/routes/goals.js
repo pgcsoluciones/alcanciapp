@@ -39,8 +39,8 @@ export async function handleGoals(request, env) {
             const targetAmount = frontTarget ? Number(frontTarget) : null;
 
             const stmt = env.DB.prepare(
-                "INSERT INTO goals (id, user_id, name, duration_months, frequency, privacy, target_amount) VALUES (?, ?, ?, ?, ?, ?, ?)"
-            ).bind(goalId, userId, body.name, body.duration_months, body.frequency, body.privacy, targetAmount);
+                "INSERT INTO goals (id, user_id, name, duration_months, frequency, privacy, target_amount, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            ).bind(goalId, userId, body.name, body.duration_months, body.frequency, body.privacy, targetAmount, body.icon);
 
             const result = await stmt.run();
             if (result.error) throw new Error("Db Error");
@@ -50,6 +50,7 @@ export async function handleGoals(request, env) {
                 goal: {
                     id: goalId,
                     name: body.name,
+                    icon: body.icon,
                     duration_months: body.duration_months,
                     frequency: body.frequency,
                     privacy: body.privacy,

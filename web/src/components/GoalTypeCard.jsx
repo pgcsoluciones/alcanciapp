@@ -1,6 +1,6 @@
 import React from 'react';
 
-const GoalTypeCard = ({ title, imageSrc, isSelected, onClick }) => {
+const GoalTypeCard = ({ title, Icon, isSelected, onClick }) => {
     return (
         <div
             onClick={onClick}
@@ -22,15 +22,7 @@ const GoalTypeCard = ({ title, imageSrc, isSelected, onClick }) => {
             }}
         >
             <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {imageSrc ? (
-                    <img
-                        src={imageSrc}
-                        alt={title}
-                        style={{ width: '48px', height: '48px', objectFit: 'contain' }}
-                    />
-                ) : (
-                    <Icon size={32} color={isSelected ? '#10B981' : '#6B7280'} />
-                )}
+                {Icon && <Icon size={32} color={isSelected ? '#10B981' : '#6B7280'} />}
             </div>
             <span style={{
                 fontSize: '13px',
