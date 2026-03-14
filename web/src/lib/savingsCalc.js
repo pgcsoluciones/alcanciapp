@@ -4,6 +4,22 @@
  * Sin JSX ni efectos secundarios — solo funciones puras.
  */
 
+// ─── Helper: label de frecuencia ────────────────────────────────────────────────────────────────────
+
+/**
+ * Devuelve la etiqueta de período según la frecuencia configurada.
+ * Ejemplos: 'semana', 'mes', 'quincena', 'día'
+ * @param {string} frequency
+ * @returns {string}
+ */
+export function getFreqLabel(frequency) {
+    const f = (frequency || 'Mensual').toLowerCase();
+    if (f.includes('semanal')) return 'semana';
+    if (f.includes('quincenal')) return 'quincena';
+    if (f.includes('diario') || f.includes('diaria')) return 'día';
+    return 'mes';
+}
+
 // ─── Períodos por frecuencia ───────────────────────────────────────────────
 
 /**
@@ -97,21 +113,38 @@ export function getPeriodsCompleted(transactions, goal) {
  * @returns {{ status: 'on_track'|'ahead'|'behind', label: string, emoji: string, color: string, bg: string }}
  */
 export function getRhythmStatus(goal, transactions) {
+    // Sin objetivo definido
     if (!goal.target_amount || goal.target_amount <= 0) {
         return { status: 'no_target', label: 'Sin objetivo', emoji: '—', color: '#6B7280', bg: '#F3F4F6' };
     }
+
+    // Calcular total real: usar transactions si existen, sino goal.total_saved
+    const totalSaved = (transactions && transactions.length > 0)
+        ? transactions.reduce((sum, tx) => sum + Number(tx.amount), 0)
+        : Number(goal.total_saved || 0);
+
+    // Meta al 100%
+    if (totalSaved >= goal.target_amount) {
+        return { status: 'completed', label: 'Completada', emoji: '🏆', color: '#059669', bg: '#ECFDF5' };
+    }
+
+    // Sin ningún aporte todavía
+    if (totalSaved === 0) {
+        return { status: 'not_started', label: 'Sin iniciar', emoji: '🏁', color: '#6B7280', bg: '#F3F4F6' };
+    }
+
     const quota = getSuggestedQuota(goal);
     const elapsed = getPeriodsElapsed(goal);
-    const totalSaved = transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
     const expected = quota * elapsed;
 
-    if (elapsed === 0 && totalSaved === 0) {
-        return { status: 'not_started', label: 'Primer aporte pendiente', emoji: '🏁', color: '#6B7280', bg: '#F3F4F6' };
+    // Si no ha pasado ningún período pero ya hay aportes → adelantado
+    if (elapsed === 0) {
+        return { status: 'ahead', label: 'Adelantado', emoji: '🚀', color: '#059669', bg: '#ECFDF5' };
     }
     if (totalSaved >= expected * 1.1) {
         return { status: 'ahead', label: 'Adelantado', emoji: '🚀', color: '#059669', bg: '#ECFDF5' };
     }
-    if (expected > 0 && totalSaved >= expected * 0.85) {
+    if (totalSaved >= expected * 0.85) {
         return { status: 'on_track', label: 'Al día', emoji: '✅', color: '#2563EB', bg: '#EFF6FF' };
     }
     return { status: 'behind', label: 'Atrasado', emoji: '⚠️', color: '#D97706', bg: '#FFFBEB' };

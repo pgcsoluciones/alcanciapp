@@ -4,7 +4,7 @@ import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
 import { API_BASE_URL } from '../lib/config';
 import { ASSET } from '../lib/assets';
-import { getSuggestedQuota, getRhythmStatus, fmtRD } from '../lib/savingsCalc';
+import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD } from '../lib/savingsCalc';
 
 // ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
 function DashboardInsights({ goals, onGoToDetail }) {
@@ -20,19 +20,30 @@ function DashboardInsights({ goals, onGoToDetail }) {
         }, goalsWithTarget[0])
         : null;
 
-    // Suma de cuotas pendientes (próxima cuota global)
+    // Suma de cuotas (usar la frecuencia de la primera meta como referencia; si son mixtas mostramos 'por período')
     const totalNextQuota = goals.reduce((sum, g) => sum + getSuggestedQuota(g), 0);
+    const quotaLabel = goals.length === 1
+        ? `por ${getFreqLabel(goals[0].frequency)}`
+        : goals.every(g => getFreqLabel(g.frequency) === getFreqLabel(goals[0].frequency))
+            ? `por ${getFreqLabel(goals[0].frequency)}`
+            : 'por período';
 
-    // Ritmo del usuario (peor ritmo entre todas las metas)
-    const rhythms = goals.map(g => getRhythmStatus(g, [])); // sin transactions en dashboard
+    // Ritmo global: el peor ritmo entre todas las metas (con fallback a goal.total_saved)
+    const rhythms = goals.map(g => getRhythmStatus(g, []));
     const hasBehind = rhythms.some(r => r.status === 'behind');
-    const hasAhead = rhythms.every(r => r.status === 'ahead' || r.status === 'no_target');
+    const allNotStarted = rhythms.every(r => r.status === 'not_started' || r.status === 'no_target');
+    const hasAhead = !hasBehind && rhythms.some(r => r.status === 'ahead');
+    const allCompleted = rhythms.every(r => r.status === 'completed');
 
-    const globalRhythm = hasBehind
-        ? { label: 'Atrasado en una meta', emoji: '⚠️', color: '#D97706', bg: '#FFFBEB' }
-        : hasAhead
-            ? { label: 'Todo al día o adelantado', emoji: '🚀', color: '#059669', bg: '#ECFDF5' }
-            : { label: 'Ritmo estable', emoji: '✅', color: '#2563EB', bg: '#EFF6FF' };
+    const globalRhythm = allCompleted
+        ? { label: 'Todas completadas', emoji: '🏆', color: '#059669', bg: '#ECFDF5' }
+        : allNotStarted
+            ? { label: 'Sin aportes aún', emoji: '🏁', color: '#6B7280', bg: '#F3F4F6' }
+            : hasBehind
+                ? { label: 'Atrasado en una meta', emoji: '⚠️', color: '#D97706', bg: '#FFFBEB' }
+                : hasAhead
+                    ? { label: 'Vas adelantado', emoji: '🚀', color: '#059669', bg: '#ECFDF5' }
+                    : { label: 'Al día', emoji: '✅', color: '#2563EB', bg: '#EFF6FF' };
 
     return (
         <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', padding: '20px', marginBottom: '20px' }}>
@@ -46,7 +57,7 @@ function DashboardInsights({ goals, onGoToDetail }) {
                     <div style={{ background: '#F9FAFB', borderRadius: '14px', padding: '14px', border: '1px solid #E5E7EB' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                             <Zap size={14} color="#10B981" />
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cuota mensual</span>
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cuota {quotaLabel}</span>
                         </div>
                         <div style={{ fontSize: '17px', fontWeight: '800', color: '#111827' }}>{fmtRD(totalNextQuota)}</div>
                         <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>suma de todas las metas</div>
