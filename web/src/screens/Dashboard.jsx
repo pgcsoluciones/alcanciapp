@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Target, Zap, TrendingUp, Award } from 'lucide-react';
+import { Plus, Target, Zap, TrendingUp, Award, Menu } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
 import { API_BASE_URL } from '../lib/config';
@@ -98,9 +98,9 @@ function DashboardInsights({ goals, onGoToDetail }) {
 }
 
 // ─── Dashboard Principal ────────────────────────────────────────────────────
-export default function Dashboard({ onGoToCreate, onGoToDetail, onLogout }) {
+export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu }) {
     const [goals, setGoals] = useState([]);
-    const [userName, setUserName] = useState('');
+    const [userName, setUserName] = useState(user?.name || 'Ahorrador');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -114,10 +114,8 @@ export default function Dashboard({ onGoToCreate, onGoToDetail, onLogout }) {
             const res = await fetch(`${API_BASE_URL}/api/v1/goals`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            try {
-                const userObj = JSON.parse(localStorage.getItem('alcanciapp:user') || '{}');
-                setUserName(userObj.name || 'Ahorrador');
-            } catch (e) { setUserName('Ahorrador'); }
+
+            setUserName(user?.name || 'Ahorrador');
 
             const data = await res.json();
             if (!res.ok || !data.ok) throw new Error(data.error || 'Error al cargar las metas');
@@ -140,12 +138,12 @@ export default function Dashboard({ onGoToCreate, onGoToDetail, onLogout }) {
 
                 {/* Navbar */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '14px 20px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a1a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <img src={ASSET.logo()} alt="AlcanciApp" style={{ height: '28px' }} />
-                        Alcancía
-                    </h1>
-                    <button onClick={onLogout} style={{ background: '#F3F4F6', border: 'none', color: '#4B5563', fontWeight: '600', cursor: 'pointer', fontSize: '13px', padding: '8px 16px', borderRadius: '12px' }}>
-                        Salir
+                        <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a1a', margin: 0 }}>Alcancía</h1>
+                    </div>
+                    <button onClick={onOpenMenu} style={{ background: '#F3F4F6', border: 'none', color: '#4B5563', cursor: 'pointer', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Menu size={20} />
                     </button>
                 </div>
 
@@ -165,9 +163,16 @@ export default function Dashboard({ onGoToCreate, onGoToDetail, onLogout }) {
                 ) : (
                     <>
                         {/* Saludo */}
-                        <div style={{ marginBottom: '16px', paddingLeft: '4px' }}>
-                            <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827', letterSpacing: '-0.02em' }}>Hola, {userName}</span> <span style={{ fontSize: '22px' }}>👋</span>
-                            <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '4px', marginBottom: 0 }}>Tu disciplina financiera está rindiendo frutos.</p>
+                        <div style={{ marginBottom: '16px', paddingLeft: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                                <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827', letterSpacing: '-0.02em' }}>Hola, {userName}</span> <span style={{ fontSize: '22px' }}>👋</span>
+                                <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '4px', marginBottom: 0 }}>Tu disciplina financiera está rindiendo frutos.</p>
+                            </div>
+                            <img
+                                src={user?.avatar ? ASSET.mascot(user.avatar, 128) : ASSET.mascot('mascot_happy.png', 128)}
+                                alt="Avatar"
+                                style={{ width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #10B981', padding: '2px', backgroundColor: 'white' }}
+                            />
                         </div>
 
                         {/* Balance Global Widget */}

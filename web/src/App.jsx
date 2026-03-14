@@ -1,31 +1,24 @@
-import React, { useState, useEffect } from 'react'
-import SelectGoal from './screens/SelectGoal'
-import Login from './screens/Login'
-import Register from './screens/Register'
-import Dashboard from './screens/Dashboard'
-import GoalDetail from './screens/GoalDetail'
-import { API_BASE_URL } from './lib/config.js'
+import Sidebar from './components/Sidebar'
+import Profile from './screens/Profile'
+import ActiveGoals from './screens/ActiveGoals'
+import Achievements from './screens/Achievements'
+import GoalLevels from './screens/GoalLevels'
+import Coach from './screens/Coach'
+import ChallengesCircles from './screens/ChallengesCircles'
 
 function App() {
     const [apiStatus, setApiStatus] = useState('Conectando...')
     const [token, setToken] = useState(localStorage.getItem('alcanciapp:token') || null)
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('alcanciapp:user') || 'null'))
 
+    // Estado del menú lateral
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
     // Vista actual
     const [currentView, setCurrentView] = useState(!token ? 'login' : 'dashboard')
 
     // Estado de la meta guardada (leída de localStorage)
     const [savedGoal, setSavedGoal] = useState(null)
-
-    // Estado del formulario
-    const [goalName, setGoalName] = useState('')
-    const [goalDuration, setGoalDuration] = useState('1')
-    const [goalFreq, setGoalFreq] = useState('Mensual')
-    const [goalPrivacy, setGoalPrivacy] = useState('Privada')
-
-    // Estado de validación
-    const [formError, setFormError] = useState('')
-    const [formSuccess, setFormSuccess] = useState('')
 
     // Cargar meta de localStorage al iniciar
     useEffect(() => {
@@ -71,114 +64,77 @@ function App() {
         setCurrentView('login')
     }
 
-    const handleSaveGoal = (e) => {
-        e.preventDefault()
-        setFormError('')
-        setFormSuccess('')
-
-        if (!goalName.trim()) {
-            setFormError('El nombre de la meta es obligatorio.')
-            return
-        }
-
-        if (!goalDuration) {
-            setFormError('Debe seleccionar la duración en meses.')
-            return
-        }
-
-        const newGoal = {
-            name: goalName.trim(),
-            durationMonths: parseInt(goalDuration, 10),
-            frequency: goalFreq,
-            privacy: goalPrivacy,
-            createdAt: new Date().toISOString()
-        }
-
-        // Guardar en localStorage
-        localStorage.setItem('alcanciapp:goal', JSON.stringify(newGoal))
-        setSavedGoal(newGoal)
-
-        setFormSuccess(`¡Meta "${goalName}" guardada en modo ${goalPrivacy} para aportar de forma ${goalFreq} por ${goalDuration} mes(es)!`)
-
-        // Limpiamos
-        setGoalName('')
-        setGoalDuration('1')
-        setGoalFreq('Mensual')
-        setGoalPrivacy('Privada')
+    const handleUpdateUser = (updatedUser) => {
+        localStorage.setItem('alcanciapp:user', JSON.stringify(updatedUser))
+        setUser(updatedUser)
     }
 
-    const handleDeleteGoal = () => {
-        localStorage.removeItem('alcanciapp:goal')
-        setSavedGoal(null)
-    }
-
-    const handleBack = () => {
-        setCurrentView('dashboard')
-        setFormError('')
-        setFormSuccess('')
-    }
-
-    const handleGoalCreated = (goalData) => {
-        // Guardamos en local para la demo del panel
-        localStorage.setItem('alcanciapp:goal', JSON.stringify(goalData))
-        setSavedGoal(goalData)
-        setCurrentView('dashboard')
-    }
-
-    // Estilos inline compartidos
-    const inputStyle = {
-        width: '100%',
-        padding: '12px',
-        marginBottom: '16px',
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        fontSize: '16px',
-        boxSizing: 'border-box'
-    }
-
-    const labelStyle = {
-        display: 'block',
-        marginBottom: '6px',
-        fontWeight: 'bold',
-        fontSize: '14px',
-        color: '#444'
+    const handleNavigate = (view) => {
+        setCurrentView(view)
+        window.scrollTo(0, 0)
     }
 
     return (
-        <div style={{ maxWidth: '480px', margin: '0 auto', padding: '16px', fontFamily: 'sans-serif' }}>
-            <h1>AlcanciApp (Web)</h1>
+        <div style={{ maxWidth: '480px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+            {token && (
+                <Sidebar
+                    isOpen={isSidebarOpen}
+                    onClose={() => setIsSidebarOpen(false)}
+                    onNavigate={handleNavigate}
+                    user={user}
+                    onLogout={handleLogout}
+                />
+            )}
 
             {currentView === 'login' ? (
                 <Login
                     onLoginSuccess={handleLoginSuccess}
-                    onGoToRegister={() => setCurrentView('register')}
+                    onGoToRegister={() => handleNavigate('register')}
                 />
             ) : currentView === 'register' ? (
                 <Register
-                    onGoToLogin={() => setCurrentView('login')}
+                    onGoToLogin={() => handleNavigate('login')}
                 />
             ) : currentView === 'dashboard' ? (
                 <Dashboard
+                    user={user}
+                    onOpenMenu={() => setIsSidebarOpen(true)}
                     onLogout={handleLogout}
-                    onGoToCreate={() => setCurrentView('selectGoal')}
+                    onGoToCreate={() => handleNavigate('selectGoal')}
                     onGoToDetail={(id) => {
-                        // Navegación a detalle de meta, por ahora se loguea
-                        console.log('Navigating to detail: ', id);
-                        setCurrentView(`detail:${id}`);
+                        handleNavigate(`detail:${id}`);
                     }}
                 />
             ) : currentView === 'selectGoal' ? (
                 <SelectGoal
-                    onBack={() => setCurrentView('dashboard')}
+                    onBack={() => handleNavigate('dashboard')}
                     onGoalCreated={(goalData) => {
-                        setCurrentView('dashboard') // Se refrescará la lista automáticamente al montarse Dashboard
+                        handleNavigate('dashboard')
                     }}
                 />
             ) : currentView.startsWith('detail:') ? (
                 <GoalDetail
                     goalId={currentView.split(':')[1]}
-                    onBack={() => setCurrentView('dashboard')}
+                    onBack={() => handleNavigate('dashboard')}
                 />
+            ) : currentView === 'profile' ? (
+                <Profile
+                    user={user}
+                    onSave={handleUpdateUser}
+                    onBack={() => handleNavigate('dashboard')}
+                />
+            ) : currentView === 'activeGoals' ? (
+                <ActiveGoals onBack={() => handleNavigate('dashboard')} />
+            ) : currentView === 'achievements' ? (
+                <Achievements onBack={() => handleNavigate('dashboard')} />
+            ) : currentView === 'goalLevels' ? (
+                <GoalLevels onBack={() => handleNavigate('dashboard')} />
+            ) : currentView === 'coach' ? (
+                <Coach onBack={() => handleNavigate('dashboard')} />
+            ) : currentView === 'challenges' ? (
+                <ChallengesCircles type="challenges" onBack={() => handleNavigate('dashboard')} />
+            ) : currentView === 'circles' ? (
+                <ChallengesCircles type="circles" onBack={() => handleNavigate('dashboard')} />
             ) : (
                 <div />
             )}
@@ -186,4 +142,3 @@ function App() {
     )
 }
 
-export default App
