@@ -2,6 +2,8 @@ import { handleOptions, getCorsHeaders } from './lib/cors.js';
 import { handleAnonymousAuth } from './routes/auth.js';
 import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
+import { handlePiggyBanks } from './routes/piggyBanks.js';
+import { handleUploadEvidence } from './routes/uploadEvidence.js';
 
 export default {
     async fetch(request, env, ctx) {
@@ -50,10 +52,19 @@ export default {
                 return handleGoals(request, env);
             }
 
-            // TRANSACTIONS DIRETS
+            // TRANSACTIONS DIRECTAS
             if (path.startsWith("/api/v1/transactions")) {
-                // Sólo soportamos DELETE /api/v1/transactions/:id
                 return handleTransactions(request, env);
+            }
+
+            // ALCANCÍAS FÍSICAS
+            if (path.startsWith("/api/v1/piggy-banks")) {
+                return handlePiggyBanks(request, env);
+            }
+
+            // UPLOAD EVIDENCIAS (fotos de aportes a R2)
+            if (path === "/api/v1/upload-evidence") {
+                return handleUploadEvidence(request, env);
             }
 
             // Fallback not found

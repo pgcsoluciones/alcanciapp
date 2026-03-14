@@ -18,6 +18,7 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
     const [selectedGoalId, setSelectedGoalId] = useState(null);
     const [targetAmount, setTargetAmount] = useState('');
     const [durationMonths, setDurationMonths] = useState(3);
+    const [frequency, setFrequency] = useState('Mensual');
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
@@ -46,9 +47,9 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 name: selectedGoalData.title,
                 target_amount: Number(targetAmount),
                 duration_months: durationMonths,
-                icon: selectedGoalData.id, // Guardamos dinámico el ID o Name del icono asociado en BD en vez del archivo .png
+                icon: selectedGoalData.id,
                 privacy: 'Privada',
-                frequency: 'Mensual'
+                frequency
             };
 
             const res = await fetch(`${API_BASE_URL}/api/v1/goals`, {
@@ -182,6 +183,39 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                             })}
                         </div>
                     </div>
+
+                    {/* Frecuencia de aportes */}
+                    <div style={{ marginTop: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                            Frecuencia de aportes
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                            {['Diario', 'Semanal', 'Quincenal', 'Mensual'].map(freq => {
+                                const sel = frequency === freq;
+                                return (
+                                    <button
+                                        key={freq}
+                                        type="button"
+                                        onClick={() => setFrequency(freq)}
+                                        style={{
+                                            padding: '10px 4px',
+                                            backgroundColor: sel ? '#10B981' : '#F3F4F6',
+                                            color: sel ? 'white' : '#4B5563',
+                                            border: sel ? 'none' : '1px solid #E5E7EB',
+                                            borderRadius: '10px',
+                                            fontWeight: '600',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {freq}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     {errorMsg && (
                         <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '16px', fontWeight: '600' }}>
                             {errorMsg}
