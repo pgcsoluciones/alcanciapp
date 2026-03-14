@@ -138,12 +138,12 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
 
                 {/* Navbar */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '14px 20px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <img src={ASSET.logo()} alt="AlcanciApp" style={{ height: '28px' }} />
-                        <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a1a', margin: 0 }}>Alcancía</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img src={ASSET.logo()} alt="AlcanciApp" style={{ height: '36px' }} />
+                        <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#10B981', margin: 0, letterSpacing: '-0.02em' }}>AlcanciApp</h1>
                     </div>
                     <button onClick={onOpenMenu} style={{ background: '#F3F4F6', border: 'none', color: '#4B5563', cursor: 'pointer', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Menu size={20} />
+                        <Menu size={22} />
                     </button>
                 </div>
 
@@ -163,16 +163,18 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                 ) : (
                     <>
                         {/* Saludo */}
-                        <div style={{ marginBottom: '16px', paddingLeft: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div>
-                                <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827', letterSpacing: '-0.02em' }}>Hola, {userName}</span> <span style={{ fontSize: '22px' }}>👋</span>
-                                <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '4px', marginBottom: 0 }}>Tu disciplina financiera está rindiendo frutos.</p>
-                            </div>
+                        <div style={{ marginBottom: '20px', padding: '4px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <img
                                 src={user?.avatar ? ASSET.mascot(user.avatar, 128) : ASSET.mascot('mascot_happy.png', 128)}
                                 alt="Avatar"
-                                style={{ width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #10B981', padding: '2px', backgroundColor: 'white' }}
+                                style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2.5px solid #10B981', padding: '3px', backgroundColor: 'white', flexShrink: 0 }}
                             />
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827', letterSpacing: '-0.02em' }}>Hola, {userName}</span> <span style={{ fontSize: '22px' }}>👋</span>
+                                </div>
+                                <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '4px', marginBottom: 0, lineHeight: '1.4' }}>Tu disciplina financiera está rindiendo frutos.</p>
+                            </div>
                         </div>
 
                         {/* Balance Global Widget */}

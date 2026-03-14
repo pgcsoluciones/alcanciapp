@@ -131,7 +131,10 @@ function App() {
                     onBack={() => handleNavigate('dashboard')}
                 />
             ) : currentView === 'activeGoals' ? (
-                <ActiveGoals onBack={() => handleNavigate('dashboard')} />
+                <ActiveGoals
+                    onBack={() => handleNavigate('dashboard')}
+                    onSelectGoal={(id) => handleNavigate(`detail:${id}`)}
+                />
             ) : currentView === 'achievements' ? (
                 <Achievements onBack={() => handleNavigate('dashboard')} />
             ) : currentView === 'goalLevels' ? (

@@ -260,9 +260,9 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                     {/* Plazo */}
                     <div style={{ marginBottom: '0' }}>
                         <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                            Plazo estimado
+                            Plazo estimado (meses)
                         </label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             {[3, 6, 12].map(months => {
                                 const sel = durationMonths === months;
                                 return (
@@ -271,7 +271,7 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                                         type="button"
                                         onClick={() => setDurationMonths(months)}
                                         style={{
-                                            flex: 1, height: '48px',
+                                            flex: 1, minWidth: '80px', height: '48px',
                                             backgroundColor: sel ? '#10B981' : '#F3F4F6',
                                             color: sel ? 'white' : '#4B5563',
                                             border: sel ? 'none' : '1px solid #E5E7EB',
@@ -279,10 +279,27 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                                             cursor: 'pointer', transition: 'all 0.2s'
                                         }}
                                     >
-                                        {months} Meses
+                                        {months} M
                                     </button>
                                 );
                             })}
+                            <div style={{ flex: '1.5', minWidth: '120px', position: 'relative' }}>
+                                <input
+                                    type="number"
+                                    placeholder="Otro..."
+                                    value={![3, 6, 12].includes(durationMonths) ? durationMonths : ''}
+                                    onChange={(e) => setDurationMonths(Number(e.target.value))}
+                                    style={{
+                                        width: '100%', height: '48px', padding: '0 12px',
+                                        borderRadius: '12px', border: ![3, 6, 12].includes(durationMonths) ? '2px solid #10B981' : '1px solid #E5E7EB',
+                                        fontSize: '15px', fontWeight: '600', outline: 'none',
+                                        boxSizing: 'border-box', backgroundColor: ![3, 6, 12].includes(durationMonths) ? 'white' : '#F9FAFB'
+                                    }}
+                                />
+                                {![3, 6, 12].includes(durationMonths) && durationMonths > 0 && (
+                                    <div style={{ position: 'absolute', right: '10px', top: '15px', fontSize: '12px', color: '#10B981', fontWeight: '700' }}>meses</div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

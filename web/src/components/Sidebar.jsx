@@ -7,9 +7,10 @@ import { ASSET } from '../lib/assets';
 
 export default function Sidebar({ isOpen, onClose, onNavigate, user, onLogout }) {
     const menuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+        { id: 'dashboard', label: 'Mi panel', icon: <LayoutDashboard size={20} /> },
         { id: 'activeGoals', label: 'Mis metas activas', icon: <Target size={20} /> },
-        { id: 'selectGoal', label: 'Registrar aporte', icon: <PlusCircle size={20} /> },
+        { id: 'activeGoals', label: 'Registrar aporte', icon: <PlusCircle size={20} /> },
+        { id: 'selectGoal', label: 'Nueva meta', icon: <PlusCircle size={20} /> },
         { id: 'achievements', label: 'Mis logros', icon: <Award size={20} /> },
         { id: 'goalLevels', label: 'Niveles por meta', icon: <BarChart3 size={20} /> },
         { id: 'circles', label: 'Círculos', icon: <Users size={20} /> },
