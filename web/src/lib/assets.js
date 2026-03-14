@@ -16,7 +16,8 @@ export const ASSET = {
         panelSquareGold: () => `/assets/ui/cards/panel_square_gold.png`,
         scrollParchment: () => `/assets/ui/cards/scroll_parchment.png`
     },
-    bg: (filename) => `/assets/ui/${filename}`
+    bg: (filename) => `/assets/ui/${filename}`,
+    avatar: (filename, size = 256) => `/assets/avatars/${size}/${filename}`
 };
 
 // ---------- Existing files (DO NOT RENAME) ----------
@@ -90,6 +91,9 @@ export const MASCOT_FILES = [
     "mascot_stats.png",
     "mascot_think.png",
 ];
+
+// Avatars (16)
+export const AVATAR_FILES = Array.from({ length: 16 }, (_, i) => `${i + 1}.png`);
 
 // Logo
 export const LOGO_MAIN = "logo_main.png";

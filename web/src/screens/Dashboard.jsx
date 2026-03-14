@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Target, Zap, TrendingUp, Award, Menu } from 'lucide-react';
+import { Plus, Target, Zap, TrendingUp, Award, Menu, Coins } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
 import { API_BASE_URL } from '../lib/config';
 import { ASSET } from '../lib/assets';
-import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD } from '../lib/savingsCalc';
+import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD, getPigCoins, getAchievements, fmtPigCoin } from '../lib/savingsCalc';
 
 // ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
-function DashboardInsights({ goals, onGoToDetail }) {
+function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
     // Meta más avanzada (por % de progreso)
@@ -20,7 +19,6 @@ function DashboardInsights({ goals, onGoToDetail }) {
         }, goalsWithTarget[0])
         : null;
 
-    // Suma de cuotas (usar la frecuencia de la primera meta como referencia; si son mixtas mostramos 'por período')
     const totalNextQuota = goals.reduce((sum, g) => sum + getSuggestedQuota(g), 0);
     const quotaLabel = goals.length === 1
         ? `por ${getFreqLabel(goals[0].frequency)}`
@@ -28,8 +26,8 @@ function DashboardInsights({ goals, onGoToDetail }) {
             ? `por ${getFreqLabel(goals[0].frequency)}`
             : 'por período';
 
-    // Ritmo global: el peor ritmo entre todas las metas (con fallback a goal.total_saved)
-    const rhythms = goals.map(g => getRhythmStatus(g, []));
+    // Ritmo global
+    const rhythms = goals.map(g => getRhythmStatus(g, transactions.filter(t => t.goal_id === g.id)));
     const hasBehind = rhythms.some(r => r.status === 'behind');
     const allNotStarted = rhythms.every(r => r.status === 'not_started' || r.status === 'no_target');
     const hasAhead = !hasBehind && rhythms.some(r => r.status === 'ahead');
@@ -46,49 +44,44 @@ function DashboardInsights({ goals, onGoToDetail }) {
                     : { label: 'Al día', emoji: '✅', color: '#2563EB', bg: '#EFF6FF' };
 
     return (
-        <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', padding: '20px', marginBottom: '20px' }}>
-            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9CA3AF', fontWeight: '700', marginBottom: '14px' }}>
-                Resumen de tu plan
+        <div style={{ background: 'white', border: '1px solid #F3F4F6', borderRadius: '24px', padding: '24px', marginBottom: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9CA3AF', fontWeight: '800', marginBottom: '16px' }}>
+                Insights de Ahorro
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {/* Próxima cuota global */}
-                {totalNextQuota > 0 && (
-                    <div style={{ background: '#F9FAFB', borderRadius: '14px', padding: '14px', border: '1px solid #E5E7EB' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                            <Zap size={14} color="#10B981" />
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cuota {quotaLabel}</span>
-                        </div>
-                        <div style={{ fontSize: '17px', fontWeight: '800', color: '#111827' }}>{fmtRD(totalNextQuota)}</div>
-                        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>suma de todas las metas</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ background: '#F9FAFB', borderRadius: '18px', padding: '16px', border: '1px solid #F3F4F6' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <Zap size={14} color="#10B981" />
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#6B7280', textTransform: 'uppercase' }}>Próxima Cuota</span>
                     </div>
-                )}
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827' }}>{fmtRD(totalNextQuota)}</div>
+                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', fontWeight: '600' }}>{quotaLabel}</div>
+                </div>
 
-                {/* Ritmo global */}
-                <div style={{ background: globalRhythm.bg, borderRadius: '14px', padding: '14px', border: `1px solid ${globalRhythm.bg}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <div style={{ background: globalRhythm.bg, borderRadius: '18px', padding: '16px', border: `1px solid ${globalRhythm.bg}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                         <TrendingUp size={14} color={globalRhythm.color} />
-                        <span style={{ fontSize: '11px', fontWeight: '700', color: globalRhythm.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ritmo</span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: globalRhythm.color, textTransform: 'uppercase' }}>Estado</span>
                     </div>
-                    <div style={{ fontSize: '16px', fontWeight: '800', color: globalRhythm.color }}>{globalRhythm.emoji}</div>
-                    <div style={{ fontSize: '11px', color: globalRhythm.color, marginTop: '2px', opacity: 0.8 }}>{globalRhythm.label}</div>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: globalRhythm.color }}>{globalRhythm.emoji}</div>
+                    <div style={{ fontSize: '10px', color: globalRhythm.color, marginTop: '4px', fontWeight: '700', opacity: 0.8 }}>{globalRhythm.label}</div>
                 </div>
             </div>
 
-            {/* Meta más avanzada */}
             {topGoal && Number(topGoal.total_saved) > 0 && (
                 <button
                     onClick={() => onGoToDetail(topGoal.id)}
-                    style={{ marginTop: '12px', width: '100%', background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}
+                    style={{ marginTop: '16px', width: '100%', background: '#F0FDF4', border: '1px solid #DCFCE7', borderRadius: '18px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.2s ease' }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Award size={16} color="#F59E0B" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Award size={18} color="#10B981" />
                         <div>
-                            <div style={{ fontSize: '12px', color: '#9CA3AF', fontWeight: '600' }}>Meta más avanzada</div>
-                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{topGoal.name}</div>
+                            <div style={{ fontSize: '10px', color: '#059669', fontWeight: '800', textTransform: 'uppercase' }}>Meta Estrella</div>
+                            <div style={{ fontSize: '15px', fontWeight: '900', color: '#111827' }}>{topGoal.name}</div>
                         </div>
                     </div>
-                    <div style={{ fontSize: '16px', fontWeight: '800', color: '#10B981' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
                         {Math.round((Number(topGoal.total_saved) / Number(topGoal.target_amount)) * 100)}%
                     </div>
                 </button>
@@ -100,26 +93,31 @@ function DashboardInsights({ goals, onGoToDetail }) {
 // ─── Dashboard Principal ────────────────────────────────────────────────────
 export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu }) {
     const [goals, setGoals] = useState([]);
-    const [userName, setUserName] = useState(user?.name || 'Ahorrador');
+    const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => { loadGoals(); }, []);
+    useEffect(() => { loadData(); }, []);
 
-    const loadGoals = async () => {
+    const loadData = async () => {
         setIsLoading(true);
         setError('');
         try {
             const token = localStorage.getItem('alcanciapp:token');
-            const res = await fetch(`${API_BASE_URL}/api/v1/goals`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const headers = { 'Authorization': `Bearer ${token}` };
+            const [goalsRes, txsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/v1/goals`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/transactions`, { headers })
+            ]);
 
-            setUserName(user?.name || 'Ahorrador');
+            const goalsData = await goalsRes.json();
+            const txsData = await txsRes.json();
 
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Error al cargar las metas');
-            setGoals(data.goals || []);
+            if (!goalsRes.ok || !goalsData.ok) throw new Error(goalsData.error || 'Error en metas');
+            if (!txsRes.ok || !txsData.ok) throw new Error(txsData.error || 'Error en transacciones');
+
+            setGoals(goalsData.goals || []);
+            setTransactions(txsData.transactions || []);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -127,121 +125,141 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
         }
     };
 
-    // Totales para el widget de balance
+    // Cálculos Gamificados
     const totalSavedAll = goals.reduce((acc, g) => acc + (Number(g.total_saved) || 0), 0);
-    const totalTargetAll = goals.reduce((acc, g) => acc + (Number(g.target_amount) || 0), 0);
-    const globalPercent = totalTargetAll > 0 ? Math.round((totalSavedAll / totalTargetAll) * 100) : null;
+    const totalPigCoins = goals.reduce((acc, g) => acc + getPigCoins(g, transactions.filter(t => t.goal_id === g.id)), 0);
+
+    // Obtener insignias únicas de todas las metas
+    const allBadges = [];
+    goals.forEach(g => {
+        const goalTxs = transactions.filter(t => t.goal_id === g.id);
+        const achievements = getAchievements(g, goalTxs);
+        achievements.forEach(a => {
+            if (!allBadges.find(b => b.id === a.id)) {
+                allBadges.push(a);
+            }
+        });
+    });
+    const recentBadges = allBadges.slice(0, 5);
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px', boxSizing: 'border-box' }}>
             <div style={{ maxWidth: '480px', margin: '0 auto' }}>
 
                 {/* Navbar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '14px 20px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '14px 20px', borderRadius: '18px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F3F4F6' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img src={ASSET.logo()} alt="AlcanciApp" style={{ height: '36px' }} />
-                        <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#10B981', margin: 0, letterSpacing: '-0.02em' }}>AlcanciApp</h1>
+                        <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#10B981', margin: 0, letterSpacing: '-0.02em' }}>AlcanciApp</h1>
                     </div>
-                    <button onClick={onOpenMenu} style={{ background: '#F3F4F6', border: 'none', color: '#4B5563', cursor: 'pointer', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <button onClick={onOpenMenu} style={{ background: '#F9FAFB', border: '1px solid #F3F4F6', color: '#4B5563', cursor: 'pointer', padding: '10px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Menu size={22} />
                     </button>
                 </div>
 
                 {error && (
-                    <div style={{ background: '#FEF2F2', color: '#B91C1C', padding: '16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px' }}>
+                    <div style={{ background: '#FEF2F2', color: '#B91C1C', padding: '16px', borderRadius: '16px', marginBottom: '20px', fontSize: '14px', border: '1px solid #FCA5A5' }}>
                         {error}
-                        <div style={{ marginTop: '8px' }}>
-                            <button onClick={loadGoals} style={{ background: 'none', border: 'none', color: '#B91C1C', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'bold' }}>Reintentar</button>
-                        </div>
+                        <button onClick={loadData} style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: '#B91C1C', textDecoration: 'underline', cursor: 'pointer', fontWeight: '900' }}>Reintentar</button>
                     </div>
                 )}
 
                 {isLoading ? (
-                    <div style={{ textAlign: 'center', padding: '60px', color: '#9CA3AF', fontSize: '14px' }}>Cargando metas...</div>
+                    <div style={{ textAlign: 'center', padding: '60px', color: '#9CA3AF', fontSize: '15px', fontWeight: '700' }}>Cargando tu panel...</div>
                 ) : goals.length === 0 ? (
                     <EmptyGoalsState onCreateClick={onGoToCreate} />
                 ) : (
                     <>
-                        {/* Saludo */}
-                        <div style={{ marginBottom: '20px', padding: '4px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        {/* Saludo con Avatar */}
+                        <div style={{ marginBottom: '24px', padding: '0 8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <img
-                                src={user?.avatar ? ASSET.mascot(user.avatar, 128) : ASSET.mascot('mascot_happy.png', 128)}
+                                src={user?.avatar ? ASSET.avatar(user.avatar, 128) : ASSET.avatar('1.png', 128)}
                                 alt="Avatar"
-                                style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2.5px solid #10B981', padding: '3px', backgroundColor: 'white', flexShrink: 0 }}
+                                style={{ width: '68px', height: '68px', borderRadius: '50%', border: '3px solid #10B981', padding: '4px', backgroundColor: 'white', flexShrink: 0, boxShadow: '0 4px 12px rgba(16,185,129,0.1)' }}
                             />
                             <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827', letterSpacing: '-0.02em' }}>Hola, {userName}</span> <span style={{ fontSize: '22px' }}>👋</span>
+                                <div style={{ fontSize: '24px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em' }}>
+                                    ¡Hola, {user?.name || 'Ahorrador'}! 👋
                                 </div>
-                                <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '4px', marginBottom: 0, lineHeight: '1.4' }}>Tu disciplina financiera está rindiendo frutos.</p>
+                                <p style={{ color: '#6B7280', fontSize: '14px', marginTop: '4px', marginBottom: 0, fontWeight: '600' }}>
+                                    Llevas ahorrado <strong style={{ color: '#10B981' }}>{fmtRD(totalSavedAll)}</strong>
+                                </p>
                             </div>
                         </div>
 
-                        {/* Balance Global Widget */}
-                        <div style={{ background: '#10B981', borderRadius: '20px', padding: '24px', color: 'white', marginBottom: '20px', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)', position: 'relative', overflow: 'hidden' }}>
+                        {/* Balance Global Gamificado */}
+                        <div style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', borderRadius: '24px', padding: '26px', color: 'white', marginBottom: '24px', boxShadow: '0 12px 30px rgba(16, 185, 129, 0.25)', position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'relative', zIndex: 1 }}>
-                                <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.9, marginBottom: '8px' }}>Balance Total Ahorrado</div>
-                                <div style={{ fontSize: '34px', fontWeight: '800', letterSpacing: '-0.02em', marginBottom: '16px' }}>
-                                    {fmtRD(totalSavedAll)}
+                                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '8px' }}>Tu Riqueza en PigCoins</div>
+                                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', marginBottom: '18px' }}>
+                                    <div style={{ fontSize: '42px', fontWeight: '900', lineHeight: 1 }}>{fmtPigCoin(totalPigCoins).replace(' 🐷', '')}</div>
+                                    <div style={{ fontSize: '28px', marginBottom: '4px' }}>🐷</div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '14px' }}>
+                                <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '18px' }}>
                                     <div>
-                                        <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '3px' }}>Metas Activas</div>
-                                        <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{goals.length}</div>
+                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Metas</div>
+                                        <div style={{ fontWeight: '900', fontSize: '16px' }}>{goals.length}</div>
                                     </div>
-                                    {globalPercent !== null && (
-                                        <div>
-                                            <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '3px' }}>Progreso Global</div>
-                                            <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{globalPercent}%</div>
-                                        </div>
-                                    )}
-                                    {totalTargetAll > 0 && (
-                                        <div>
-                                            <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '3px' }}>Objetivo Total</div>
-                                            <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{fmtRD(totalTargetAll)}</div>
-                                        </div>
-                                    )}
+                                    <div>
+                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Insignias</div>
+                                        <div style={{ fontWeight: '900', fontSize: '16px' }}>{allBadges.length}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Equivalente</div>
+                                        <div style={{ fontWeight: '900', fontSize: '16px' }}>{fmtRD(totalSavedAll)}</div>
+                                    </div>
                                 </div>
                             </div>
-                            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '150px', height: '150px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
+                            <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', opacity: 0.1 }}>
+                                <Coins size={140} color="white" />
+                            </div>
                         </div>
 
                         {/* Resumen Inteligente */}
-                        <DashboardInsights goals={goals} onGoToDetail={onGoToDetail} />
+                        <DashboardInsights goals={goals} transactions={transactions} onGoToDetail={onGoToDetail} />
 
-                        {/* Meta Principal */}
-                        {goals.length > 0 && (
-                            <div style={{ marginBottom: '20px' }}>
-                                <h2 style={{ fontSize: '15px', color: '#374151', fontWeight: '700', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '4px' }}>
-                                    <Target size={16} color="#10B981" /> Meta Principal
-                                </h2>
-                                <GoalCard goal={goals[0]} onClick={() => onGoToDetail(goals[0].id)} />
-                                <button
-                                    onClick={() => onGoToDetail(goals[0].id)}
-                                    style={{ width: '100%', padding: '13px', backgroundColor: '#ECFDF5', color: '#10B981', border: '1px solid #A7F3D0', borderRadius: '14px', fontWeight: 'bold', cursor: 'pointer', marginTop: '-6px', fontSize: '14px' }}
-                                >
-                                    💰 Hacer Aporte
-                                </button>
+                        {/* Insignias Recientes */}
+                        {recentBadges.length > 0 && (
+                            <div style={{ marginBottom: '24px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 4px' }}>
+                                    <h2 style={{ fontSize: '15px', color: '#111827', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Award size={18} color="#F59E0B" /> Logros Recientes
+                                    </h2>
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' }}>
+                                    {recentBadges.map(b => (
+                                        <div key={b.id} style={{ flexShrink: 0, width: '64px', height: '64px', background: 'white', borderRadius: '50%', border: '2px solid #FEF3C7', padding: '2px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <img src={ASSET.badge(b.icon)} alt={b.label} style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
+                                        </div>
+                                    ))}
+                                    <button onClick={onGoToCreate} style={{ flexShrink: 0, width: '64px', height: '64px', background: '#F3F4F6', borderRadius: '50%', border: '2px dashed #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                        <Plus size={24} color="#9CA3AF" />
+                                    </button>
+                                </div>
                             </div>
                         )}
 
-                        {/* Otras metas */}
-                        {goals.length > 1 && (
-                            <>
-                                <h2 style={{ fontSize: '15px', color: '#374151', fontWeight: '700', marginBottom: '10px', paddingLeft: '4px' }}>Otras Metas</h2>
-                                {goals.slice(1).map(goal => (
-                                    <GoalCard key={goal.id} goal={goal} onClick={() => onGoToDetail(goal.id)} />
-                                ))}
-                            </>
-                        )}
+                        {/* Listado de Metas */}
+                        <div style={{ marginBottom: '12px', paddingLeft: '4px' }}>
+                            <h2 style={{ fontSize: '17px', color: '#111827', fontWeight: '900' }}>Tus Planes</h2>
+                        </div>
+                        {goals.map(goal => (
+                            <GoalCard
+                                key={goal.id}
+                                goal={{ ...goal, _transactions: transactions.filter(t => t.goal_id === goal.id) }}
+                                onClick={() => onGoToDetail(goal.id)}
+                            />
+                        ))}
 
                         {/* CTA Nueva Meta */}
                         <button
                             onClick={onGoToCreate}
-                            style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '16px', padding: '17px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '20px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
+                            style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '20px', padding: '18px', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '16px', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)', transition: 'transform 0.2s ease' }}
+                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                            <Plus size={20} />
-                            Nueva Meta
+                            <Plus size={22} />
+                            Crear Nueva Meta
                         </button>
                     </>
                 )}

@@ -106,7 +106,7 @@ export default function Profile({ user, onSave, onBack }) {
             <div style={cardStyle}>
                 <div style={avatarContainerStyle} onClick={() => setShowAvatarPicker(true)}>
                     <img
-                        src={ASSET.mascot(selectedAvatar, 256)}
+                        src={ASSET.avatar(selectedAvatar, 256)}
                         alt="Avatar"
                         style={avatarStyle}
                     />
@@ -119,20 +119,22 @@ export default function Profile({ user, onSave, onBack }) {
                     <div style={{ marginBottom: '24px', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '16px' }}>
                         <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>Elige tu avatar:</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                            {MASCOT_FILES.map(file => (
+                            {AVATAR_FILES.map(file => (
                                 <img
                                     key={file}
-                                    src={ASSET.mascot(file, 128)}
-                                    alt="Mascota"
+                                    src={ASSET.avatar(file, 128)}
+                                    alt="Avatar"
                                     onClick={() => {
                                         setSelectedAvatar(file);
                                         setShowAvatarPicker(false);
                                     }}
                                     style={{
                                         width: '100%',
+                                        aspectRatio: '1/1',
+                                        objectFit: 'cover',
                                         cursor: 'pointer',
-                                        borderRadius: '8px',
-                                        border: selectedAvatar === file ? '2px solid #10B981' : '1px solid transparent',
+                                        borderRadius: '50%',
+                                        border: selectedAvatar === file ? '2px solid #10B981' : '1px solid #F3F4F6',
                                         padding: '2px'
                                     }}
                                 />
@@ -140,7 +142,7 @@ export default function Profile({ user, onSave, onBack }) {
                         </div>
                         <button
                             onClick={() => setShowAvatarPicker(false)}
-                            style={{ width: '100%', marginTop: '12px', padding: '8px', border: 'none', background: '#F3F4F6', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}
+                            style={{ width: '100%', marginTop: '12px', padding: '12px', border: 'none', background: '#F3F4F6', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
                         >
                             Cancelar
                         </button>

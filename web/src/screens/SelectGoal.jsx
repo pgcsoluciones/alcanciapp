@@ -288,18 +288,25 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                                     type="number"
                                     placeholder="Otro..."
                                     value={![3, 6, 12].includes(durationMonths) ? durationMonths : ''}
-                                    onChange={(e) => setDurationMonths(Number(e.target.value))}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setDurationMonths(val === '' ? '' : Number(val));
+                                    }}
                                     style={{
                                         width: '100%', height: '48px', padding: '0 12px',
-                                        borderRadius: '12px', border: ![3, 6, 12].includes(durationMonths) ? '2px solid #10B981' : '1px solid #E5E7EB',
-                                        fontSize: '15px', fontWeight: '600', outline: 'none',
-                                        boxSizing: 'border-box', backgroundColor: ![3, 6, 12].includes(durationMonths) ? 'white' : '#F9FAFB'
+                                        borderRadius: '12px', border: ![3, 6, 12].includes(durationMonths) && durationMonths !== '' ? '2px solid #10B981' : '1px solid #E5E7EB',
+                                        fontSize: '15px', fontWeight: '800', outline: 'none',
+                                        boxSizing: 'border-box', backgroundColor: ![3, 6, 12].includes(durationMonths) && durationMonths !== '' ? 'white' : '#F9FAFB',
+                                        color: '#111827'
                                     }}
                                 />
                                 {![3, 6, 12].includes(durationMonths) && durationMonths > 0 && (
-                                    <div style={{ position: 'absolute', right: '10px', top: '15px', fontSize: '12px', color: '#10B981', fontWeight: '700' }}>meses</div>
+                                    <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: '#059669', fontWeight: '800', textTransform: 'uppercase' }}>meses</div>
                                 )}
                             </div>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '8px', fontWeight: '500' }}>
+                            * Puedes seleccionar un plazo rápido o escribir tu propio número de meses.
                         </div>
                     </div>
 

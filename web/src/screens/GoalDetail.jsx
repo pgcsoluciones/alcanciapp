@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Target, TrendingUp, BarChart2, Bell, Share2, Users, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Zap, Award } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, BarChart2, Bell, Share2, Users, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Zap, Award, Timer, Coins } from 'lucide-react';
 import AporteModal from '../components/AporteModal';
 import { API_BASE_URL } from '../lib/config';
+import { ASSET } from '../lib/assets';
 import {
     getSuggestedQuota,
     getPeriodsTotal,
@@ -11,7 +12,11 @@ import {
     getStreakMonths,
     getAchievements,
     getMotivationalMessage,
+    getPigCoins,
+    getPigCoinProgress,
+    getCountdown,
     fmtRD,
+    fmtPigCoin,
 } from '../lib/savingsCalc';
 
 const iconMap = {
@@ -26,12 +31,12 @@ const iconMap = {
 
 // ─── Subcomponentes ─────────────────────────────────────────────────────────
 
-function StatBox({ label, value, sub }) {
+function StatBox({ label, value, sub, color = '#111827' }) {
     return (
-        <div style={{ background: '#F9FAFB', borderRadius: '12px', padding: '14px', textAlign: 'center', border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: '17px', fontWeight: '800', color: '#111827', letterSpacing: '-0.01em' }}>{value}</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '600', marginTop: '3px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-            {sub && <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>{sub}</div>}
+        <div style={{ background: 'white', borderRadius: '16px', padding: '16px', textAlign: 'center', border: '1px solid #F3F4F6', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <div style={{ fontSize: '18px', fontWeight: '900', color, letterSpacing: '-0.02em' }}>{value}</div>
+            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '800', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+            {sub && <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>{sub}</div>}
         </div>
     );
 }
@@ -44,6 +49,17 @@ function AchievementChip({ emoji, label }) {
     );
 }
 
+function BadgeItem({ label, icon }) {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', width: '80px' }}>
+            <div style={{ width: '64px', height: '64px', background: '#F0FDF4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #DCFCE7', overflow: 'hidden' }}>
+                <img src={ASSET.badge(icon)} alt={label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: '#111827', textAlign: 'center', lineHeight: '1.2' }}>{label}</span>
+        </div>
+    );
+}
+
 // ─── Componente Principal ───────────────────────────────────────────────────
 
 export default function GoalDetail({ goalId, onBack }) {
@@ -52,6 +68,13 @@ export default function GoalDetail({ goalId, onBack }) {
     const [isLoading, setIsLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [error, setError] = useState('');
+    const [now, setNow] = useState(new Date());
+
+    // Timer para el countdown
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
 
     const handleAporteSuccess = (newTx) => {
         setTransactions(prev => [newTx, ...prev]);
@@ -85,7 +108,8 @@ export default function GoalDetail({ goalId, onBack }) {
     };
 
     const handleAporte = async ({ amount }) => {
-        setIsSubmitting(true);
+        // setIsSubmitting is not defined in the original code, so I'm commenting it out
+        // setIsSubmitting(true); 
         setError('');
         try {
             const token = localStorage.getItem('alcanciapp:token');
@@ -103,7 +127,8 @@ export default function GoalDetail({ goalId, onBack }) {
         } catch (err) {
             setError(err.message);
         } finally {
-            setIsSubmitting(false);
+            // setIsSubmitting is not defined in the original code, so I'm commenting it out
+            // setIsSubmitting(false);
         }
     };
 
@@ -131,7 +156,10 @@ export default function GoalDetail({ goalId, onBack }) {
     const rhythm = getRhythmStatus(goal, transactions);
     const streak = getStreakMonths(transactions);
     const achievements = getAchievements(goal, transactions);
-    const motivationalMsg = getMotivationalMessage(rhythm, progressPercent, streak);
+    const motivationalMsg = getMotivationalMessage(goal, transactions);
+    const pigCoins = getPigCoins(goal, transactions);
+    const pigProg = getPigCoinProgress(goal, transactions);
+    const countdown = getCountdown(goal, now);
 
     const freqLabel = (goal.frequency || 'mes').toLowerCase()
         .replace('mensual', 'mes').replace('semanal', 'semana')
@@ -142,12 +170,20 @@ export default function GoalDetail({ goalId, onBack }) {
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px', boxSizing: 'border-box' }}>
             <div style={{ maxWidth: '480px', margin: '0 auto' }}>
 
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-                    <button onClick={onBack} style={{ background: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                        <ArrowLeft size={20} color="#374151" />
-                    </button>
-                    <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827', margin: '0 0 0 16px' }}>Detalle de Meta</h1>
+                {/* Header Dinámico */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <button onClick={onBack} style={{ background: 'white', border: 'none', borderRadius: '12px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                            <ArrowLeft size={20} color="#374151" />
+                        </button>
+                        <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#111827', margin: '0 0 0 16px' }}>Mi Meta</h1>
+                    </div>
+                    {countdown.totalSeconds > 0 && (
+                        <div style={{ background: '#10B981', color: 'white', padding: '6px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Timer size={14} />
+                            {countdown.days > 0 ? `${countdown.days}d ` : ''}{countdown.hours}h {countdown.minutes}m
+                        </div>
+                    )}
                 </div>
 
                 {error && (
@@ -156,130 +192,129 @@ export default function GoalDetail({ goalId, onBack }) {
                     </div>
                 )}
 
-                {/* ─── Hero Card ─── */}
-                <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', marginBottom: '16px' }}>
-                    {/* Nombre e Icono */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                {/* ─── Hero Card PigCoin ─── */}
+                <div style={{ background: 'linear-gradient(135deg, #ffffff 0%, #F0FDF4 100%)', border: '1px solid #E5E7EB', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', marginBottom: '16px', position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <div style={{ width: '48px', height: '48px', backgroundColor: '#F3F4F6', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <IconComponent size={24} color="#4B5563" />
+                            <div style={{ width: '56px', height: '56px', backgroundColor: 'white', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                                <IconComponent size={28} color="#10B981" />
                             </div>
                             <div>
-                                <h2 style={{ fontSize: '20px', margin: '0 0 4px 0', fontWeight: 'bold', color: '#111827' }}>{goal.name}</h2>
-                                <p style={{ margin: 0, color: '#6B7280', fontSize: '13px' }}>{goal.duration_months} meses • {goal.frequency}</p>
+                                <h2 style={{ fontSize: '22px', margin: '0 0 2px 0', fontWeight: '900', color: '#111827' }}>{goal.name}</h2>
+                                <div style={{ background: rhythm.bg, color: rhythm.color, padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: '800', display: 'inline-block', textTransform: 'uppercase' }}>
+                                    {rhythm.emoji} {rhythm.label}
+                                </div>
                             </div>
                         </div>
-                        <div style={{ background: rhythm.bg, color: rhythm.color, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700' }}>
-                            {rhythm.emoji} {rhythm.label}
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#10B981' }}>{fmtPigCoin(pigCoins)}</div>
+                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>PIGCOINS</div>
                         </div>
                     </div>
 
-                    {/* Progreso */}
+                    {/* Progreso Visual */}
                     {hasTarget ? (
                         <>
-                            <div style={{ marginBottom: '8px' }}>
-                                <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6B7280', marginBottom: '6px', fontWeight: '600' }}>Progreso</div>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                    <span style={{ fontSize: '30px', fontWeight: '800', color: '#111827', letterSpacing: '-0.02em' }}>
-                                        {fmtRD(totalSaved)}
-                                    </span>
-                                    <div style={{ backgroundColor: '#ECFDF5', color: '#10B981', padding: '3px 8px', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px' }}>
-                                        {Math.round(progressPercent)}%
-                                    </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px' }}>
+                                <div>
+                                    <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Total Ahorrado</div>
+                                    <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em' }}>{fmtRD(totalSaved)}</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{Math.round(progressPercent)}%</div>
+                                    <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>DE {fmtRD(goal.target_amount)}</div>
                                 </div>
                             </div>
-                            <div style={{ width: '100%', height: '8px', background: '#F3F4F6', borderRadius: '4px', overflow: 'hidden', marginBottom: '10px' }}>
-                                <div style={{ width: `${progressPercent}%`, height: '100%', background: progressPercent >= 100 ? '#059669' : '#10B981', borderRadius: '4px', transition: 'width 0.4s ease-out' }} />
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#6B7280', marginBottom: '16px' }}>
-                                <span>Restante: <strong style={{ color: '#374151' }}>{fmtRD(remaining)}</strong></span>
-                                <span>Objetivo: <strong style={{ color: '#374151' }}>{fmtRD(goal.target_amount)}</strong></span>
+                            <div style={{ width: '100%', height: '12px', background: 'rgba(0,0,0,0.05)', borderRadius: '6px', overflow: 'hidden', marginBottom: '20px' }}>
+                                <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #059669, #10B981)', borderRadius: '6px', transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }} />
                             </div>
 
-                            {/* Mensaje motivacional */}
-                            <p style={{ margin: 0, fontSize: '13px', color: '#059669', textAlign: 'center', fontStyle: 'italic', backgroundColor: '#ECFDF5', padding: '10px 14px', borderRadius: '10px', fontWeight: '500' }}>
-                                {motivationalMsg}
-                            </p>
+                            {/* Mensaje motivacional contextual */}
+                            <div style={{ background: 'white', borderRadius: '16px', padding: '14px', border: '1px solid #DCFCE7', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ fontSize: '24px' }}>🐷</div>
+                                <p style={{ margin: 0, fontSize: '13px', color: '#065F46', fontWeight: '600', lineHeight: '1.4' }}>
+                                    {motivationalMsg}
+                                </p>
+                            </div>
                         </>
                     ) : (
-                        <div style={{ fontSize: '30px', fontWeight: '800', color: '#111827' }}>{fmtRD(totalSaved)}</div>
+                        <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827' }}>{fmtRD(totalSaved)}</div>
                     )}
                 </div>
 
-                {/* ─── Plan de Ahorro ─── */}
+                {/* ─── Métricas de Gamificación ─── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <StatBox
+                        label="Ritmo Actual"
+                        value={rhythm.label}
+                        color={rhythm.color}
+                        sub={rhythm.emoji}
+                    />
+                    <StatBox
+                        label="Racha Activa"
+                        value={streak > 0 ? `${streak} 🔥` : '—'}
+                        sub="meses seguidos"
+                    />
+                </div>
+
+                {/* ─── Detalle de PigCoin ─── */}
                 {hasTarget && (
-                    <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
+                    <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #F3F4F6', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                            <BarChart2 size={18} color="#10B981" />
-                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#111827' }}>Plan de Ahorro</h3>
+                            <Coins size={18} color="#10B981" />
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Desglose de PigCoin</h3>
                         </div>
 
-                        {/* Grid de estadísticas */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
-                            <StatBox
-                                label={`Cuota / ${freqLabel}`}
-                                value={fmtRD(quota)}
-                            />
-                            <StatBox
-                                label="Períodos"
-                                value={`${periodsCompleted} / ${periodsTotal}`}
-                                sub="completados / totales"
-                            />
-                            <StatBox
-                                label="Transcurridos"
-                                value={periodsElapsed}
-                                sub={`${freqLabel}s desde inicio`}
-                            />
-                            <StatBox
-                                label="Racha"
-                                value={streak > 0 ? `${streak} mes${streak !== 1 ? 'es' : ''}` : '—'}
-                                sub={streak >= 3 ? '⚡ ¡Consistente!' : streak > 0 ? 'en curso' : 'sin racha aún'}
-                            />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            {/* Círculo de progreso fraccionado */}
+                            <div style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
+                                <svg width="80" height="80" viewBox="0 0 80 80">
+                                    <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" strokeWidth="6" />
+                                    <circle cx="40" cy="40" r="34" fill="none" stroke="#10B981" strokeWidth="6"
+                                        strokeDasharray={`${pigProg.completePercent * 2.13}, 213`}
+                                        strokeDashoffset="0" transform="rotate(-90 40 40)"
+                                        style={{ transition: 'stroke-dasharray 1s ease-out' }}
+                                    />
+                                </svg>
+                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '14px', fontWeight: '900', color: '#111827' }}>
+                                    {pigProg.completePercent}%
+                                </div>
+                            </div>
+
+                            <div>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>
+                                    Has acumulado <strong style={{ color: '#111827' }}>{pigProg.current} PigCoin</strong> en este periodo.
+                                </p>
+                                {pigProg.remainingRD > 0 && (
+                                    <div style={{ fontSize: '12px', color: '#10B981', fontWeight: '700' }}>
+                                        + {fmtRD(pigProg.remainingRD)} para 1 PigCoin completo
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Próxima cuota */}
-                        {rhythm.status === 'behind' && (
-                            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Zap size={18} color="#D97706" />
-                                <div>
-                                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#92400E' }}>Aporte extra sugerido</div>
-                                    <div style={{ fontSize: '12px', color: '#92400E', opacity: 0.8 }}>Un aporte de {fmtRD(quota)} te pone al día esta semana.</div>
-                                </div>
-                            </div>
-                        )}
+                        <div style={{ height: '1px', background: '#F3F4F6', margin: '20px 0' }} />
 
-                        {rhythm.status === 'on_track' && (
-                            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <TrendingUp size={18} color="#2563EB" />
-                                <div>
-                                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#1E40AF' }}>Próxima cuota sugerida</div>
-                                    <div style={{ fontSize: '12px', color: '#1E40AF', opacity: 0.8 }}>{fmtRD(quota)} — ¡sigue así!</div>
-                                </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <TrendingUp size={16} color="#9CA3AF" />
+                                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600' }}>Cuota por {freqLabel}:</span>
                             </div>
-                        )}
-
-                        {rhythm.status === 'ahead' && (
-                            <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Award size={18} color="#059669" />
-                                <div>
-                                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#065F46' }}>¡Vas adelantado! 🚀</div>
-                                    <div style={{ fontSize: '12px', color: '#065F46', opacity: 0.8 }}>Puedes mantener el ritmo o hacer el siguiente aporte cuando quieras.</div>
-                                </div>
-                            </div>
-                        )}
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: '#111827' }}>{fmtRD(quota)}</span>
+                        </div>
                     </div>
                 )}
 
-                {/* ─── Logros ─── */}
+                {/* ─── Insignias ─── */}
                 {achievements.length > 0 && (
-                    <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #F3F4F6', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
                             <Award size={18} color="#F59E0B" />
-                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#111827' }}>Logros</h3>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Insignias Ganadas</h3>
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', overflowX: 'auto', gap: '16px', paddingBottom: '8px' }}>
                             {achievements.map(a => (
-                                <AchievementChip key={a.id} emoji={a.emoji} label={a.label} />
+                                <BadgeItem key={a.id} label={a.label} icon={a.icon} />
                             ))}
                         </div>
                     </div>
@@ -288,9 +323,11 @@ export default function GoalDetail({ goalId, onBack }) {
                 {/* ─── CTA de Aporte ─── */}
                 <button
                     onClick={() => setShowModal(true)}
-                    style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '16px', padding: '18px', fontSize: '16px', fontWeight: '800', cursor: 'pointer', marginTop: '16px', boxShadow: '0 4px 16px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                    style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '18px', padding: '20px', fontSize: '17px', fontWeight: '900', cursor: 'pointer', marginTop: '16px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', transition: 'all 0.2s ease' }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                    💰 Registrar Aporte en mi Alcancía
+                    💰 Hacer Aporte
                 </button>
 
                 {/* ─── Futuras funciones (Placeholders honestos) ─── */}
@@ -309,42 +346,38 @@ export default function GoalDetail({ goalId, onBack }) {
                 </div>
 
                 {/* ─── Historial ─── */}
-                <div style={{ marginTop: '28px' }}>
-                    <h3 style={{ fontSize: '16px', color: '#111827', marginBottom: '14px', fontWeight: 'bold' }}>Historial de aportes</h3>
+                <div style={{ marginTop: '32px' }}>
+                    <h3 style={{ fontSize: '18px', color: '#111827', marginBottom: '16px', fontWeight: '900' }}>Historial del Plan</h3>
                     {transactions.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '28px 20px', background: 'white', borderRadius: '16px', color: '#6B7280', border: '1px dashed #D1D5DB', fontSize: '14px' }}>
-                            Aún no hay aportes. ¡El primero es el más importante!
+                        <div style={{ textAlign: 'center', padding: '32px 20px', background: 'white', borderRadius: '20px', color: '#9CA3AF', border: '2px dashed #F3F4F6', fontSize: '14px', fontWeight: '600' }}>
+                            Tu alcancía está vacía. ¡Haz tu primer aporte!
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {transactions.map(tx => (
-                                <div key={tx.id} style={{ background: 'white', padding: '14px 16px', borderRadius: '14px', border: '1px solid #F3F4F6', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                                <div key={tx.id} style={{ background: 'white', padding: '16px', borderRadius: '18px', border: '1px solid #F3F4F6', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ background: '#ECFDF5', padding: '8px', borderRadius: '10px' }}>
-                                                <TrendingUp size={18} color="#059669" />
+                                            <div style={{ background: '#F0FDF4', padding: '10px', borderRadius: '12px' }}>
+                                                <TrendingUp size={20} color="#10B981" />
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>
-                                                    Aporte {tx.confirmed_physical ? '✅' : ''}
+                                                <div style={{ fontWeight: '800', color: '#111827', fontSize: '15px' }}>
+                                                    Aporte {tx.confirmed_physical ? '📦' : ''}
                                                 </div>
-                                                <div style={{ color: '#9CA3AF', fontSize: '12px', marginTop: '1px' }}>
-                                                    {new Date(tx.created_at || Date.now()).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                <div style={{ color: '#9CA3AF', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', marginTop: '2px' }}>
+                                                    {new Date(tx.created_at || Date.now()).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' })}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style={{ fontWeight: 'bold', color: '#059669', fontSize: '15px' }}>
-                                            +{fmtRD(tx.amount)}
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontWeight: '900', color: '#10B981', fontSize: '17px' }}>+{fmtRD(tx.amount)}</div>
+                                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>+{fmtPigCoin(tx.amount / quota)}</div>
                                         </div>
                                     </div>
                                     {tx.note && (
-                                        <div style={{ marginTop: '8px', padding: '6px 10px', background: '#F9FAFB', borderRadius: '8px', fontSize: '12px', color: '#4B5563', fontStyle: 'italic' }}>
+                                        <div style={{ marginTop: '12px', padding: '10px 14px', background: '#F9FAFB', borderRadius: '12px', fontSize: '13px', color: '#4B5563', fontStyle: 'italic', border: '1px solid #F3F4F6' }}>
                                             "{tx.note}"
-                                        </div>
-                                    )}
-                                    {tx.evidence_url && (
-                                        <div style={{ marginTop: '6px', fontSize: '11px', color: '#10B981', fontWeight: '600' }}>
-                                            📷 Evidencia adjunta
                                         </div>
                                     )}
                                 </div>
@@ -354,7 +387,7 @@ export default function GoalDetail({ goalId, onBack }) {
                 </div>
             </div>
 
-            {/* ─── Modal de Aporte ─── */}
+            {/* Modal de Aporte */}
             {showModal && (
                 <AporteModal
                     goalId={goalId}

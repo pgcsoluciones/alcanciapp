@@ -130,7 +130,7 @@ function App() {
                     onSave={handleUpdateUser}
                     onBack={() => handleNavigate('dashboard')}
                 />
-            ) : currentView === 'activeGoals' ? (
+            ) : currentView === 'activeGoals' || currentView === 'registrarAporte' ? (
                 <ActiveGoals
                     onBack={() => handleNavigate('dashboard')}
                     onSelectGoal={(id) => handleNavigate(`detail:${id}`)}
