@@ -67,6 +67,7 @@ export default function GoalDetail({ goalId, onBack }) {
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [revealRealCurrency, setRevealRealCurrency] = useState(false); // V1 Privacy
     const [error, setError] = useState('');
     const [now, setNow] = useState(new Date());
 
@@ -215,11 +216,27 @@ export default function GoalDetail({ goalId, onBack }) {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px' }}>
                                 <div>
                                     <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Total Ahorrado</div>
-                                    <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em' }}>{fmtRD(totalSaved)}</div>
+                                    <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em', filter: revealRealCurrency ? 'none' : 'blur(8px)', transition: 'filter 0.3s' }}>
+                                        {fmtRD(totalSaved)}
+                                    </div>
+                                    {!revealRealCurrency && (
+                                        <button
+                                            onClick={() => {
+                                                const pin = prompt('Ingresa tu PIN de seguridad (Default: 1234)');
+                                                if (pin === '1234') setRevealRealCurrency(true);
+                                                else alert('PIN Incorrecto');
+                                            }}
+                                            style={{ background: '#F3F4F6', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '6px', color: '#6B7280' }}
+                                        >
+                                            🔓 VER EQUIVALENTE
+                                        </button>
+                                    )}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{Math.round(progressPercent)}%</div>
-                                    <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>DE {fmtRD(goal.target_amount)}</div>
+                                    <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700', filter: revealRealCurrency ? 'none' : 'blur(4px)' }}>
+                                        DE {fmtRD(goal.target_amount)}
+                                    </div>
                                 </div>
                             </div>
                             <div style={{ width: '100%', height: '12px', background: 'rgba(0,0,0,0.05)', borderRadius: '6px', overflow: 'hidden', marginBottom: '20px' }}>
@@ -297,7 +314,9 @@ export default function GoalDetail({ goalId, onBack }) {
                                 <TrendingUp size={16} color="#9CA3AF" />
                                 <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600' }}>Cuota por {freqLabel}:</span>
                             </div>
-                            <span style={{ fontSize: '14px', fontWeight: '800', color: '#111827' }}>{fmtRD(quota)}</span>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: '#111827', filter: revealRealCurrency ? 'none' : 'blur(6px)' }}>
+                                {fmtRD(quota)}
+                            </span>
                         </div>
                     </div>
                 )}
@@ -317,15 +336,31 @@ export default function GoalDetail({ goalId, onBack }) {
                     </div>
                 )}
 
-                {/* ─── CTA de Aporte ─── */}
-                <button
-                    onClick={() => setShowModal(true)}
-                    style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '18px', padding: '20px', fontSize: '17px', fontWeight: '900', cursor: 'pointer', marginTop: '16px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', transition: 'all 0.2s ease' }}
-                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
-                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                    💰 Hacer Aporte
-                </button>
+                {/* ─── CTA de Aporte (Bloqueado si está al 100%) ─── */}
+                {progressPercent >= 100 ? (
+                    <div style={{ background: '#ECFDF5', border: '2px solid #10B981', borderRadius: '18px', padding: '24px', textAlign: 'center', marginTop: '16px' }}>
+                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🏆</div>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '900', color: '#065F46' }}>¡Meta Cumplida!</h3>
+                        <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#059669', fontWeight: '600' }}>
+                            Has alcanzado tu objetivo. Tu disciplina es ejemplar.
+                        </p>
+                        <button
+                            onClick={onBack}
+                            style={{ width: '100%', background: '#10B981', color: 'white', border: 'none', borderRadius: '14px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}
+                        >
+                            Crear Nueva Meta
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '18px', padding: '20px', fontSize: '17px', fontWeight: '900', cursor: 'pointer', marginTop: '16px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', transition: 'all 0.2s ease' }}
+                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                        💰 Hacer Aporte
+                    </button>
+                )}
 
                 {/* ─── Futuras funciones (Placeholders honestos) ─── */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px' }}>

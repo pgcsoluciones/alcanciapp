@@ -33,14 +33,21 @@ export async function handleGoals(request, env) {
                 });
             }
 
+            const currency = body.currency || 'DOP';
+            if (!['DOP', 'USD'].includes(currency)) {
+                return new Response(JSON.stringify({ ok: false, error: "Moneda no soportada. Use 'DOP' o 'USD'." }), {
+                    status: 400, headers: baseHeaders
+                });
+            }
+
             const goalId = crypto.randomUUID();
             // Soporte para target_amount proveniente de SelectGoal.jsx
             const frontTarget = body.target_amount !== undefined ? body.target_amount : body.targetAmount;
             const targetAmount = frontTarget ? Number(frontTarget) : null;
 
             const stmt = env.DB.prepare(
-                "INSERT INTO goals (id, user_id, name, duration_months, frequency, privacy, target_amount, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            ).bind(goalId, userId, body.name, body.duration_months, body.frequency, body.privacy, targetAmount, body.icon);
+                "INSERT INTO goals (id, user_id, name, duration_months, frequency, privacy, target_amount, icon, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            ).bind(goalId, userId, body.name, body.duration_months, body.frequency, body.privacy, targetAmount, body.icon, currency);
 
             const result = await stmt.run();
             if (result.error) throw new Error("Db Error");
@@ -54,7 +61,8 @@ export async function handleGoals(request, env) {
                     duration_months: body.duration_months,
                     frequency: body.frequency,
                     privacy: body.privacy,
-                    target_amount: targetAmount
+                    target_amount: targetAmount,
+                    currency
                 }
             }), { status: 201, headers: baseHeaders });
         }

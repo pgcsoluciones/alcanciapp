@@ -5,6 +5,7 @@ import { handleTransactions } from './routes/transactions.js';
 import { handlePiggyBanks } from './routes/piggyBanks.js';
 import { handleUploadEvidence } from './routes/uploadEvidence.js';
 import { handleProfile } from './routes/profile.js';
+import { handleBadges } from './routes/badges.js';
 
 export default {
     async fetch(request, env, ctx) {
@@ -56,6 +57,11 @@ export default {
             // TRANSACTIONS DIRECTAS
             if (path.startsWith("/api/v1/transactions")) {
                 return handleTransactions(request, env);
+            }
+
+            // INSIGNIAS
+            if (path === "/api/v1/badges") {
+                return handleBadges(request, env);
             }
 
             // ALCANCÍAS FÍSICAS

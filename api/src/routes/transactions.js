@@ -1,6 +1,7 @@
 // src/routes/transactions.js
 import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
+import { evaluateBadges } from '../lib/badges.js';
 
 export async function handleTransactions(request, env) {
     const corsHeaders = getCorsHeaders(request, env);
@@ -31,9 +32,8 @@ export async function handleTransactions(request, env) {
         }
 
         // ── [POST] /api/v1/goals/:id/transactions ──────────────────────────
-        // (Resiliente a variaciones de segments)
         if (method === 'POST' && url.pathname.includes('/goals/') && url.pathname.endsWith('/transactions')) {
-            const goalId = pathSegments[3]; // api/v1/goals/:id/transactions -> seg 3
+            const goalId = pathSegments[3];
             if (!goalId) throw new Error('goalId no detectado en la URL');
 
             const body = await request.json();
@@ -46,13 +46,20 @@ export async function handleTransactions(request, env) {
                 return new Response(JSON.stringify({ ok: false, error: 'Debes confirmar que el dinero fue introducido en tu alcancía física.' }), { status: 400, headers: baseHeaders });
             }
 
-            // Verificar que la meta pertenece al usuario
-            const goal = await env.DB.prepare(
-                'SELECT id FROM goals WHERE id = ? AND user_id = ?'
-            ).bind(goalId, userId).first();
+            // Verificar que la meta pertenece al usuario y NO está completada
+            const goal = await env.DB.prepare(`
+                SELECT id, target_amount, 
+                COALESCE((SELECT SUM(amount) FROM goal_transactions WHERE goal_id = ?), 0) as total_saved 
+                FROM goals WHERE id = ? AND user_id = ?
+            `).bind(goalId, goalId, userId).first();
 
             if (!goal) {
                 return new Response(JSON.stringify({ ok: false, error: 'Meta inaccesible' }), { status: 403, headers: baseHeaders });
+            }
+
+            // Regla V1: Bloquear si meta está al 100%
+            if (goal.target_amount && goal.total_saved >= goal.target_amount) {
+                return new Response(JSON.stringify({ ok: false, error: 'Meta completada. No se permiten más aportes. ¡Crea una nueva meta!' }), { status: 403, headers: baseHeaders });
             }
 
             const txId = crypto.randomUUID();
@@ -65,6 +72,9 @@ export async function handleTransactions(request, env) {
                  VALUES (?, ?, ?, ?, ?, ?, ?)`
             ).bind(txId, goalId, userId, body.amount, note, evidenceUrl, confirmedPhysical).run();
 
+            // Evaluar insignias tras el aporte
+            const newBadges = await evaluateBadges(env.DB, userId, goalId, body.amount, env);
+
             return new Response(JSON.stringify({
                 ok: true,
                 transaction: {
@@ -74,7 +84,8 @@ export async function handleTransactions(request, env) {
                     evidence_url: evidenceUrl,
                     confirmed_physical: confirmedPhysical,
                     created_at: new Date().toISOString()
-                }
+                },
+                unlocked_badges: newBadges
             }), { status: 201, headers: baseHeaders });
         }
 

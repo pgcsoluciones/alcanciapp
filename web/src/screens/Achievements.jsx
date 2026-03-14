@@ -1,38 +1,122 @@
-import React from 'react';
-import { Award, ArrowLeft } from 'lucide-react';
-import { ASSET, BADGE_FILES } from '../lib/assets';
+import React, { useState, useEffect } from 'react';
+import { Award, ArrowLeft, Lock } from 'lucide-react';
+import { ASSET } from '../lib/assets';
+import { API_BASE_URL } from '../lib/config';
 
 export default function Achievements({ onBack }) {
-    // Simulación de logros obtenidos
-    const unlockedBadges = ['badge_first_goal.png', 'badge_saving_champion.png', 'badge_iron_streak.png'];
+    const [catalog, setCatalog] = useState([]);
+    const [userBadges, setUserBadges] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const loadBadges = async () => {
+            try {
+                const token = localStorage.getItem('alcanciapp:token');
+                const res = await fetch(`${API_BASE_URL}/api/v1/badges`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok || !data.ok) throw new Error(data.error || 'Error al cargar insignias');
+
+                setCatalog(data.catalog || []);
+                setUserBadges(data.user_badges || []);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadBadges();
+    }, []);
+
+    if (isLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>Cargando tus logros...</div>;
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px' }}>
             <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+
+                {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                    <button onClick={onBack} style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '8px', cursor: 'pointer' }}>
-                        <ArrowLeft size={20} />
+                    <button onClick={onBack} style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                        <ArrowLeft size={20} color="#374151" />
                     </button>
-                    <h1 style={{ fontSize: '20px', margin: 0, fontWeight: 'bold' }}>Mis Logros</h1>
+                    <div>
+                        <h1 style={{ fontSize: '20px', margin: 0, fontWeight: '900', color: '#111827' }}>Mis Insignias</h1>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>
+                            Has desbloqueado {userBadges.length} de {catalog.length}
+                        </p>
+                    </div>
                 </div>
 
+                {error && <div style={{ color: 'red', marginBottom: '16px' }}>{error}</div>}
+
+                {/* Grid de Insignias */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {BADGE_FILES.slice(0, 8).map(badge => {
-                        const isUnlocked = unlockedBadges.includes(badge);
+                    {catalog.map(badge => {
+                        const isUnlocked = userBadges.some(ub => ub.badge_code === badge.code);
                         return (
-                            <div key={badge} style={{
+                            <div key={badge.code} style={{
                                 background: 'white',
-                                borderRadius: '20px',
-                                padding: '20px',
+                                borderRadius: '24px',
+                                padding: '24px 16px',
                                 textAlign: 'center',
-                                opacity: isUnlocked ? 1 : 0.4,
-                                filter: isUnlocked ? 'none' : 'grayscale(1)',
-                                border: isUnlocked ? '2px solid #F59E0B' : '1px solid #E5E7EB'
+                                position: 'relative',
+                                border: isUnlocked ? '2px solid #10B981' : '1px solid #E5E7EB',
+                                boxShadow: isUnlocked ? '0 10px 20px rgba(16,185,129,0.1)' : 'none',
+                                transition: 'all 0.3s ease'
                             }}>
-                                <img src={ASSET.badge(badge, 128)} alt="Insignia" style={{ width: '80px', marginBottom: '12px' }} />
-                                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151' }}>
-                                    {badge.replace('badge_', '').replace('.png', '').split('_').join(' ')}
+                                {!isUnlocked && (
+                                    <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                                        <Lock size={14} color="#D1D5DB" />
+                                    </div>
+                                )}
+
+                                <div style={{
+                                    width: '80px',
+                                    height: '80px',
+                                    margin: '0 auto 16px',
+                                    filter: isUnlocked ? 'none' : 'grayscale(1) opacity(0.5)',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <img
+                                        src={ASSET.badge(badge.icon)}
+                                        alt={badge.name}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                    />
                                 </div>
+
+                                <h3 style={{
+                                    fontSize: '14px',
+                                    fontWeight: '900',
+                                    color: isUnlocked ? '#111827' : '#9CA3AF',
+                                    margin: '0 0 6px 0'
+                                }}>
+                                    {badge.name}
+                                </h3>
+
+                                <p style={{
+                                    fontSize: '10px',
+                                    color: isUnlocked ? '#059669' : '#D1D5DB',
+                                    fontWeight: '700',
+                                    margin: 0,
+                                    lineHeight: '1.4'
+                                }}>
+                                    {badge.description}
+                                </p>
+
+                                {isUnlocked && (
+                                    <div style={{
+                                        marginTop: '12px',
+                                        fontSize: '9px',
+                                        fontWeight: '800',
+                                        color: '#10B981',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}>
+                                        ¡Desbloqueado!
+                                    </div>
+                                )}
                             </div>
                         );
                     })}

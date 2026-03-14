@@ -41,6 +41,7 @@ const DEFAULT_CUSTOM_ICON = 'target';
 const SelectGoal = ({ onBack, onGoalCreated }) => {
     const [selectedGoalId, setSelectedGoalId] = useState(null);
     const [targetAmount, setTargetAmount] = useState('');
+    const [currency, setCurrency] = useState('DOP'); // V1: Moneda obligatoria
     const [durationMonths, setDurationMonths] = useState(3);
     const [frequency, setFrequency] = useState('Mensual');
     const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +92,7 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
             const payload = {
                 name: goalName,
                 target_amount: Number(targetAmount),
+                currency, // V1
                 duration_months: durationMonths,
                 icon: iconId,
                 privacy: 'Privada',
@@ -236,16 +238,39 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                 {/* ─── Detalle de la meta (monto, plazo, frecuencia) ─── */}
                 <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', marginBottom: '24px', border: '1px solid #F3F4F6' }}>
 
-                    {/* Monto */}
+                    {/* Monto y Moneda */}
                     <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                            Monto Objetivo (RD$)
-                        </label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                                Monto Objetivo
+                            </label>
+                            <div style={{ display: 'flex', background: '#F3F4F6', borderRadius: '10px', padding: '4px' }}>
+                                {['DOP', 'USD'].map(m => (
+                                    <button
+                                        key={m}
+                                        onClick={() => setCurrency(m)}
+                                        style={{
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '8px',
+                                            fontSize: '11px',
+                                            fontWeight: '800',
+                                            cursor: 'pointer',
+                                            backgroundColor: currency === m ? '#10B981' : 'transparent',
+                                            color: currency === m ? 'white' : '#6B7280',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <input
                             type="number"
                             value={targetAmount}
                             onChange={(e) => setTargetAmount(e.target.value)}
-                            placeholder="Ej. 50000"
+                            placeholder={`Ej. ${currency === 'DOP' ? '50000' : '1000'}`}
                             style={{
                                 width: '100%', padding: '16px', borderRadius: '12px',
                                 border: '1px solid #E5E7EB', backgroundColor: '#F9FAFB',

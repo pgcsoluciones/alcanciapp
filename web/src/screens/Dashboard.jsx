@@ -56,8 +56,9 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                         <Zap size={14} color="#10B981" />
                         <span style={{ fontSize: '10px', fontWeight: '800', color: '#6B7280', textTransform: 'uppercase' }}>Próxima Cuota</span>
                     </div>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827' }}>{fmtRD(totalNextQuota)}</div>
-                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', fontWeight: '600' }}>{quotaLabel}</div>
+                    {/* V1: Solo mostrar en PigCoin por defecto */}
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827' }}>{(totalNextQuota / 250).toFixed(2)} 🐷</div>
+                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', fontWeight: '600' }}>Meta combinada</div>
                 </div>
 
                 <div style={{ background: globalRhythm.bg, borderRadius: '18px', padding: '16px', border: `1px solid ${globalRhythm.bg}` }}>
@@ -193,7 +194,7 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                                     ¡Hola, {user?.name || 'Ahorrador'}! 👋
                                 </div>
                                 <p style={{ color: '#6B7280', fontSize: '14px', marginTop: '4px', marginBottom: 0, fontWeight: '600' }}>
-                                    Llevas ahorrado <strong style={{ color: '#10B981' }}>{fmtRD(totalSavedAll)}</strong>
+                                    Tu progreso es increíble <strong style={{ color: '#10B981' }}>🐷{fmtPigCoin(totalPigCoins)}</strong>
                                 </p>
                             </div>
                         </div>
@@ -201,23 +202,19 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                         {/* Balance Global Gamificado */}
                         <div style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', borderRadius: '24px', padding: '26px', color: 'white', marginBottom: '24px', boxShadow: '0 12px 30px rgba(16, 185, 129, 0.25)', position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'relative', zIndex: 1 }}>
-                                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '8px' }}>Tu Riqueza en PigCoins</div>
+                                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '8px' }}>Tus PigCoins Acumulados</div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', marginBottom: '18px' }}>
                                     <div style={{ fontSize: '42px', fontWeight: '900', lineHeight: 1 }}>{fmtPigCoin(totalPigCoins).replace(' 🐷', '')}</div>
                                     <div style={{ fontSize: '28px', marginBottom: '4px' }}>🐷</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '18px' }}>
-                                    <div>
-                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Metas</div>
-                                        <div style={{ fontWeight: '900', fontSize: '16px' }}>{goals.length}</div>
+                                    <div onClick={() => alert('Próximamente: Ingresa contraseña para ver moneda real')} style={{ cursor: 'pointer' }}>
+                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Equivalente Real</div>
+                                        <div style={{ fontWeight: '900', fontSize: '16px', textDecoration: 'underline dashed', textUnderlineOffset: '4px' }}>VER MONTO</div>
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Insignias</div>
                                         <div style={{ fontWeight: '900', fontSize: '16px' }}>{allBadges.length}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Equivalente</div>
-                                        <div style={{ fontWeight: '900', fontSize: '16px' }}>{fmtRD(totalSavedAll)}</div>
                                     </div>
                                 </div>
                             </div>
