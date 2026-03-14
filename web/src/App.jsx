@@ -1,3 +1,10 @@
+import React, { useState, useEffect } from 'react'
+import SelectGoal from './screens/SelectGoal'
+import Login from './screens/Login'
+import Register from './screens/Register'
+import Dashboard from './screens/Dashboard'
+import GoalDetail from './screens/GoalDetail'
+import { API_BASE_URL } from './lib/config.js'
 import Sidebar from './components/Sidebar'
 import Profile from './screens/Profile'
 import ActiveGoals from './screens/ActiveGoals'
@@ -141,4 +148,6 @@ function App() {
         </div>
     )
 }
+
+export default App;
 

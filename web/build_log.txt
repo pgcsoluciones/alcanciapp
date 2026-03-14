@@ -1,0 +1,28 @@
+
+> alcanciapp-web@0.0.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 1764 modules transformed.
+x Build failed in 4.38s
+error during build:
+src/main.jsx (3:7): "default" is not exported by "src/App.jsx", imported by "src/main.jsx".
+file: /Users/juanluis/Proyectos Antigravity/AlcanciApp/web/src/main.jsx:3:7
+
+1: import React from 'react'
+2: import ReactDOM from 'react-dom/client'
+3: import App from './App.jsx'
+          ^
+4: import './index.css'
+
+    at getRollupError (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/parseAst.js:402:41)
+    at error (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/parseAst.js:398:42)
+    at Module.error (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:17040:16)
+    at Module.traceVariable (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:17452:29)
+    at ModuleScope.findVariable (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:15070:39)
+    at Identifier.bind (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:5447:40)
+    at CallExpression.bind (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:2825:28)
+    at CallExpression.bind (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:12179:15)
+    at Property.bind (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:2829:23)
+    at ObjectExpression.bind (file:///Users/juanluis/Proyectos%20Antigravity/AlcanciApp/web/node_modules/rollup/dist/es/shared/node-entry.js:2825:28)
