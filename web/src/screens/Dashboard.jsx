@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Plus, Target, Zap, TrendingUp, Award, Menu, Coins } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
@@ -125,20 +126,30 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
         }
     };
 
-    // Cálculos Gamificados
-    const totalSavedAll = goals.reduce((acc, g) => acc + (Number(g.total_saved) || 0), 0);
-    const totalPigCoins = goals.reduce((acc, g) => acc + getPigCoins(g, transactions.filter(t => t.goal_id === g.id)), 0);
+    // Cálculos Gamificados Protegidos
+    const validGoals = Array.isArray(goals) ? goals : [];
+    const validTransactions = Array.isArray(transactions) ? transactions : [];
+
+    const totalSavedAll = validGoals.reduce((acc, g) => acc + (Number(g.total_saved) || 0), 0);
+
+    const totalPigCoins = validGoals.reduce((acc, g) => {
+        const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
+        const pc = getPigCoins(g, goalTxs);
+        return acc + (isNaN(pc) ? 0 : pc);
+    }, 0);
 
     // Obtener insignias únicas de todas las metas
     const allBadges = [];
-    goals.forEach(g => {
-        const goalTxs = transactions.filter(t => t.goal_id === g.id);
+    validGoals.forEach(g => {
+        const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
         const achievements = getAchievements(g, goalTxs);
-        achievements.forEach(a => {
-            if (!allBadges.find(b => b.id === a.id)) {
-                allBadges.push(a);
-            }
-        });
+        if (Array.isArray(achievements)) {
+            achievements.forEach(a => {
+                if (a && !allBadges.find(b => b.id === a.id)) {
+                    allBadges.push(a);
+                }
+            });
+        }
     });
     const recentBadges = allBadges.slice(0, 5);
 
@@ -173,7 +184,7 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                         {/* Saludo con Avatar */}
                         <div style={{ marginBottom: '24px', padding: '0 8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <img
-                                src={user?.avatar ? ASSET.avatar(user.avatar, 128) : ASSET.avatar('1.png', 128)}
+                                src={user && user.avatar ? ASSET.avatar(user.avatar, 128) : ASSET.avatar('1.png', 128)}
                                 alt="Avatar"
                                 style={{ width: '68px', height: '68px', borderRadius: '50%', border: '3px solid #10B981', padding: '4px', backgroundColor: 'white', flexShrink: 0, boxShadow: '0 4px 12px rgba(16,185,129,0.1)' }}
                             />

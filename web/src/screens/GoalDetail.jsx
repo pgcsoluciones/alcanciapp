@@ -146,20 +146,17 @@ export default function GoalDetail({ goalId, onBack }) {
 
     // ─── Cálculos ──────────────────────────────────────────────────────────
     const hasTarget = typeof goal.target_amount === 'number' && goal.target_amount > 0;
+    const currentTransactions = transactions || [];
     const totalSaved = Number(goal.total_saved || 0);
     const progressPercent = hasTarget ? Math.min((totalSaved / goal.target_amount) * 100, 100) : 0;
-    const remaining = hasTarget ? Math.max(goal.target_amount - totalSaved, 0) : 0;
     const quota = getSuggestedQuota(goal);
-    const periodsTotal = getPeriodsTotal(goal);
-    const periodsElapsed = getPeriodsElapsed(goal);
-    const periodsCompleted = getPeriodsCompleted(transactions, goal);
-    const rhythm = getRhythmStatus(goal, transactions);
-    const streak = getStreakMonths(transactions);
-    const achievements = getAchievements(goal, transactions);
-    const motivationalMsg = getMotivationalMessage(goal, transactions);
-    const pigCoins = getPigCoins(goal, transactions);
-    const pigProg = getPigCoinProgress(goal, transactions);
-    const countdown = getCountdown(goal, now);
+    const rhythm = getRhythmStatus(goal, currentTransactions);
+    const streak = getStreakMonths(currentTransactions);
+    const achievements = getAchievements(goal, currentTransactions);
+    const motivationalMsg = getMotivationalMessage(goal, currentTransactions);
+    const pigCoins = getPigCoins(goal, currentTransactions);
+    const pigProg = getPigCoinProgress(goal, currentTransactions);
+    const countdown = getCountdown(goal, currentTransactions, now);
 
     const freqLabel = (goal.frequency || 'mes').toLowerCase()
         .replace('mensual', 'mes').replace('semanal', 'semana')
@@ -283,7 +280,7 @@ export default function GoalDetail({ goalId, onBack }) {
 
                             <div>
                                 <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>
-                                    Has acumulado <strong style={{ color: '#111827' }}>{pigProg.current} PigCoin</strong> en este periodo.
+                                    Has acumulado <strong style={{ color: '#111827' }}>{fmtPigCoin(pigProg.current)}</strong> en este periodo.
                                 </p>
                                 {pigProg.remainingRD > 0 && (
                                     <div style={{ fontSize: '12px', color: '#10B981', fontWeight: '700' }}>

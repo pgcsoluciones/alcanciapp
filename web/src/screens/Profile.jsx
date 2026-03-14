@@ -1,18 +1,42 @@
 import React, { useState } from 'react';
 import { Camera, Save, ArrowLeft } from 'lucide-react';
-import { ASSET, MASCOT_FILES } from '../lib/assets';
+import { ASSET, AVATAR_FILES } from '../lib/assets';
+import { API_BASE_URL } from '../lib/config';
 
 export default function Profile({ user, onSave, onBack }) {
     const [name, setName] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
-    const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || 'mascot_happy.png');
+    // Bug fix: usar AVATAR_FILES (retratos) no MASCOT_FILES (mascotas)
+    const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || '1.png');
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
-    const handleSave = () => {
-        onSave({ ...user, name, email, avatar: selectedAvatar });
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
+    const handleSave = async () => {
+        setErrorMsg('');
+        setIsSaving(true);
+        try {
+            const token = localStorage.getItem('alcanciapp:token');
+            const res = await fetch(`${API_BASE_URL}/api/v1/profile`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ name, email, avatar: selectedAvatar })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error || 'Error al guardar perfil');
+            // Actualizar contexto global + localStorage via prop
+            onSave({ ...user, name, email, avatar: selectedAvatar });
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
+        } catch (err) {
+            setErrorMsg(err.message);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const containerStyle = {
@@ -116,8 +140,8 @@ export default function Profile({ user, onSave, onBack }) {
                 </div>
 
                 {showAvatarPicker && (
-                    <div style={{ marginBottom: '24px', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '16px' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>Elige tu avatar:</div>
+                    <div style={{ marginBottom: '24px', border: '1.5px solid #A7F3D0', borderRadius: '16px', padding: '16px', background: '#F0FDF4' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#059669', marginBottom: '12px' }}>Elige tu avatar:</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                             {AVATAR_FILES.map(file => (
                                 <img
@@ -169,14 +193,20 @@ export default function Profile({ user, onSave, onBack }) {
                     />
 
                     {success && (
-                        <div style={{ backgroundColor: '#ECFDF5', color: '#065F46', padding: '12px', borderRadius: '12px', marginBottom: '16px', fontSize: '14px', textAlign: 'center' }}>
-                            ¡Perfil actualizado correctamente!
+                        <div style={{ backgroundColor: '#ECFDF5', color: '#065F46', padding: '12px', borderRadius: '12px', marginBottom: '16px', fontSize: '14px', textAlign: 'center', fontWeight: '700' }}>
+                            ✅ ¡Perfil actualizado correctamente!
                         </div>
                     )}
 
-                    <button style={btnSaveStyle} onClick={handleSave}>
+                    {errorMsg && (
+                        <div style={{ backgroundColor: '#FEF2F2', color: '#DC2626', padding: '12px', borderRadius: '12px', marginBottom: '16px', fontSize: '13px', border: '1px solid #FCA5A5' }}>
+                            {errorMsg}
+                        </div>
+                    )}
+
+                    <button style={{ ...btnSaveStyle, opacity: isSaving ? 0.7 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }} onClick={handleSave} disabled={isSaving}>
                         <Save size={20} />
-                        Guardar cambios
+                        {isSaving ? 'Guardando...' : 'Guardar cambios'}
                     </button>
                 </div>
             </div>

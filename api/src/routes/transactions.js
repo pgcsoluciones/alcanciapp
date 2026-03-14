@@ -20,9 +20,22 @@ export async function handleTransactions(request, env) {
     const baseHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
     try {
+        // ── [GET] /api/v1/transactions ────────────────────────────────────
+        // Devuelve las últimas transacciones de TODAS las metas del usuario
+        if (method === 'GET' && url.pathname === '/api/v1/transactions') {
+            const { results } = await env.DB.prepare(
+                'SELECT * FROM goal_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'
+            ).bind(userId).all();
+
+            return new Response(JSON.stringify({ ok: true, transactions: results }), { status: 200, headers: baseHeaders });
+        }
+
         // ── [POST] /api/v1/goals/:id/transactions ──────────────────────────
-        if (method === 'POST' && pathSegments[2] === 'goals' && pathSegments[4] === 'transactions') {
-            const goalId = pathSegments[3];
+        // (Resiliente a variaciones de segments)
+        if (method === 'POST' && url.pathname.includes('/goals/') && url.pathname.endsWith('/transactions')) {
+            const goalId = pathSegments[3]; // api/v1/goals/:id/transactions -> seg 3
+            if (!goalId) throw new Error('goalId no detectado en la URL');
+
             const body = await request.json();
 
             // Validaciones
@@ -43,7 +56,7 @@ export async function handleTransactions(request, env) {
             }
 
             const txId = crypto.randomUUID();
-            const note = (body.note || '').trim().slice(0, 500); // máx 500 chars
+            const note = (body.note || '').trim().slice(0, 500);
             const evidenceUrl = body.evidence_url || null;
             const confirmedPhysical = body.confirmed_physical ? 1 : 0;
 
@@ -66,7 +79,7 @@ export async function handleTransactions(request, env) {
         }
 
         // ── [GET] /api/v1/goals/:id/transactions ──────────────────────────
-        if (method === 'GET' && pathSegments[2] === 'goals' && pathSegments[4] === 'transactions') {
+        if (method === 'GET' && url.pathname.includes('/goals/') && url.pathname.endsWith('/transactions')) {
             const goalId = pathSegments[3];
             const { results } = await env.DB.prepare(
                 'SELECT * FROM goal_transactions WHERE goal_id = ? AND user_id = ? ORDER BY created_at DESC'
@@ -75,18 +88,8 @@ export async function handleTransactions(request, env) {
             return new Response(JSON.stringify({ ok: true, transactions: results }), { status: 200, headers: baseHeaders });
         }
 
-        // ── [GET] /api/v1/transactions ────────────────────────────────────
-        // Devuelve las últimas transacciones de TODAS las metas del usuario
-        if (method === 'GET' && pathSegments[2] === 'transactions' && pathSegments.length === 3) {
-            const { results } = await env.DB.prepare(
-                'SELECT * FROM goal_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'
-            ).bind(userId).all();
-
-            return new Response(JSON.stringify({ ok: true, transactions: results }), { status: 200, headers: baseHeaders });
-        }
-
         // ── [DELETE] /api/v1/transactions/:id ──────────────────────────────
-        if (method === 'DELETE' && pathSegments[2] === 'transactions' && pathSegments.length === 4) {
+        if (method === 'DELETE' && url.pathname.startsWith('/api/v1/transactions/')) {
             const txId = pathSegments[3];
             const result = await env.DB.prepare(
                 'DELETE FROM goal_transactions WHERE id = ? AND user_id = ?'
@@ -98,7 +101,7 @@ export async function handleTransactions(request, env) {
             return new Response(JSON.stringify({ ok: true, deleted: txId }), { status: 200, headers: baseHeaders });
         }
 
-        return new Response(JSON.stringify({ error: 'Ruta de transacción no válida' }), { status: 404, headers: baseHeaders });
+        return new Response(JSON.stringify({ error: `Ruta de transacción no válida: ${method} ${url.pathname}` }), { status: 404, headers: baseHeaders });
 
     } catch (e) {
         return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: baseHeaders });

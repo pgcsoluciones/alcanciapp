@@ -43,14 +43,15 @@ export function getPigCoinProgress(goal, transactions) {
  * Calcula el tiempo restante para el próximo aporte esperado.
  * @param {Object} goal
  * @param {Array} transactions
+ * @param {Date} [currentNow] - Opcional, fecha actual
  * @returns {{ days: number, hours: number, minutes: number, totalSeconds: number }}
  */
-export function getCountdown(goal, transactions) {
+export function getCountdown(goal, transactions, currentNow) {
     if (!goal.created_at) return { days: 0, hours: 0, minutes: 0, totalSeconds: 0 };
 
     // Base: Último aporte o fecha de creación
     let lastAporteDate = new Date(goal.created_at);
-    if (transactions && transactions.length > 0) {
+    if (transactions && Array.isArray(transactions) && transactions.length > 0) {
         const sorted = [...transactions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         lastAporteDate = new Date(sorted[0].created_at);
     }
@@ -62,7 +63,7 @@ export function getCountdown(goal, transactions) {
     if (freq.includes('diario')) intervalDays = 1;
 
     const nextAporteDate = new Date(lastAporteDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
-    const now = new Date();
+    const now = currentNow || new Date();
     const diffMs = nextAporteDate - now;
 
     if (diffMs <= 0) return { days: 0, hours: 0, minutes: 0, totalSeconds: 0 };
@@ -140,27 +141,28 @@ export function getStreakMonths(transactions) {
 // ─── Logros (Gestor de Insignias Reales) ───────────────────────────────────
 
 /**
- * Retorna array de insignias desbloqueadas según reglas reales.
+ * Retorna array de insignias desbloqueadas según reglas de AlcanciApp V1.
  * @param {Object} goal
  * @param {Array} transactions
- * @returns {Array<{ id: string, label: string, icon: string }>}
+ * @returns {Array<{ id: string, label: string, icon: string, description: string }>}
  */
 export function getAchievements(goal, transactions) {
+    if (!transactions || transactions.length === 0) return [];
+
     const totalSaved = transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
     const progress = goal.target_amount > 0 ? (totalSaved / goal.target_amount) * 100 : 0;
+    const quota = getSuggestedQuota(goal);
     const achieved = [];
 
-    if (transactions.length > 0) {
-        achieved.push({ id: 'first_goal', label: 'Bienvenido A bordo', icon: 'badge_first_goal.png' });
-    }
+    // 1. Bienvenida (Primer aporte)
+    achieved.push({
+        id: 'first_goal',
+        label: 'Ahorrador Novato',
+        icon: 'badge_first_goal.png',
+        description: '¡Primer paso dado! Bienvenido a la disciplina.'
+    });
 
-    // Racha
-    const streak = getStreakMonths(transactions);
-    if (streak >= 3) {
-        achieved.push({ id: 'iron_streak', label: 'Disciplina de Hierro', icon: 'badge_iron_streak.png' });
-    }
-
-    // 2 aportes en un día (Saving Sprint)
+    // 2. Sprint de Ahorro (2 aportes en un mismo día)
     const hasSprint = transactions.some((tx, idx) => {
         return transactions.some((tx2, idx2) => {
             if (idx === idx2) return false;
@@ -170,15 +172,68 @@ export function getAchievements(goal, transactions) {
         });
     });
     if (hasSprint) {
-        achieved.push({ id: 'saving_sprint', label: 'Sprint de Ahorro', icon: 'badge_saving_sprint.png' });
+        achieved.push({
+            id: 'saving_sprint',
+            label: 'Sprint de Ahorro',
+            icon: 'badge_saving_sprint.png',
+            description: 'Dos aportes en un solo día. ¡Qué energía!'
+        });
     }
 
-    // Hitos de progreso
+    // 3. Ahorrador Extra (Aporte > 1.5x cuota)
+    const hasExtra = transactions.some(tx => Number(tx.amount) >= quota * 1.5);
+    if (hasExtra) {
+        achieved.push({
+            id: 'budget_captain',
+            label: 'Capitán del Presupuesto',
+            icon: 'badge_budget_captain.png',
+            description: 'Diste más de lo esperado. ¡Mente de tiburón!'
+        });
+    }
+
+    // 4. Disciplina de Hierro (Racha de 3 meses/períodos)
+    const streak = getStreakMonths(transactions);
+    if (streak >= 3) {
+        achieved.push({
+            id: 'iron_streak',
+            label: 'Disciplina de Hierro',
+            icon: 'badge_iron_streak.png',
+            description: '3 meses consecutivos ahorrando sin falta.'
+        });
+    }
+
+    // 5. Hitos de progreso (25, 50, 75, 100)
+    if (progress >= 25) {
+        achieved.push({
+            id: 'savings_takeoff',
+            label: 'Despegue',
+            icon: 'badge_savings_takeoff.png',
+            description: 'Ya tienes un cuarto de tu meta asegurado.'
+        });
+    }
     if (progress >= 50) {
-        achieved.push({ id: 'vault_premium', label: 'Mitad del camino', icon: 'badge_vault_premium.png' });
+        achieved.push({
+            id: 'vault_premium',
+            label: 'Bóveda Premium',
+            icon: 'badge_vault_premium.png',
+            description: '¡Mitad de camino! Tu alcancía pesa mucho.'
+        });
+    }
+    if (progress >= 75) {
+        achieved.push({
+            id: 'steady_harvest',
+            label: 'Cosecha Constante',
+            icon: 'badge_steady_harvest.png',
+            description: 'Casi lo logras, el 75% ya es tuyo.'
+        });
     }
     if (progress >= 100) {
-        achieved.push({ id: 'grand_cup', label: 'Meta Lograda', icon: 'badge_grand_progress_cup.png' });
+        achieved.push({
+            id: 'grand_cup',
+            label: 'Copa Gran Progreso',
+            icon: 'badge_grand_progress_cup.png',
+            description: '¡META LOGRADA! Eres un maestro del ahorro.'
+        });
     }
 
     return achieved;
@@ -193,14 +248,22 @@ export function getMotivationalMessage(goal, transactions) {
     const prog = getPigCoinProgress(goal, transactions);
 
     if (progress >= 100) return '¡Felicidades! Meta cumplida. 🏆';
+
     if (status.status === 'behind') {
         const missing = fmtRD(prog.remainingRD);
-        return `¡Casi! Con ${missing} completas tu próximo PigCoin. 🐷`;
+        return `⚠️ Estás un poco atrás. Con ${missing} completas tu próximo PigCoin y te pones al día.`;
     }
+
+    if (status.status === 'ahead') {
+        return '🚀 ¡Vas volando! Estás por delante de tu plan de ahorro.';
+    }
+
     if (prog.current > 0) {
-        return `Llevas ${prog.current} PigCoin acumulados este periodo.`;
+        const missing = fmtRD(prog.remainingRD);
+        return `Llevas ${fmtPigCoin(prog.current)} acumulados. ¡Solo faltan ${missing} para otro 🐷!`;
     }
-    return 'Tu Alcancía tiene hambre de ahorros. ¡Sigue así!';
+
+    return 'Tu disciplina financiera rinde frutos. ¡Haz tu primer aporte!';
 }
 
 // ─── Helpers de formato ────────────────────────────────────────────────────

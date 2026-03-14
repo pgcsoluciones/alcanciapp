@@ -4,6 +4,7 @@ import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
 import { handlePiggyBanks } from './routes/piggyBanks.js';
 import { handleUploadEvidence } from './routes/uploadEvidence.js';
+import { handleProfile } from './routes/profile.js';
 
 export default {
     async fetch(request, env, ctx) {
@@ -65,6 +66,11 @@ export default {
             // UPLOAD EVIDENCIAS (fotos de aportes a R2)
             if (path === "/api/v1/upload-evidence") {
                 return handleUploadEvidence(request, env);
+            }
+
+            // PERFIL DE USUARIO (nombre, email, avatar)
+            if (path === "/api/v1/profile") {
+                return handleProfile(request, env);
             }
 
             // Fallback not found
