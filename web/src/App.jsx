@@ -88,14 +88,10 @@ function App() {
                 />
             )}
 
-            {currentView === 'login' ? (
+            {currentView === 'login' || currentView === 'register' ? (
                 <Login
                     onLoginSuccess={handleLoginSuccess}
-                    onGoToRegister={() => handleNavigate('register')}
-                />
-            ) : currentView === 'register' ? (
-                <Register
-                    onGoToLogin={() => handleNavigate('login')}
+                    onGoToRegister={() => setCurrentView('login')}
                 />
             ) : currentView === 'dashboard' ? (
                 <Dashboard

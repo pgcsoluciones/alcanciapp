@@ -15,8 +15,9 @@ export async function handleAuth(request, env) {
 
     try {
         // ── [POST] /api/v1/auth/request-token ─────────────────────────────
+        // Sirve para LOGIN y para RE-AUTH (unlock)
         if (path === '/api/v1/auth/request-token') {
-            const { email } = await request.json();
+            const { email, type } = await request.json(); // type: 'login' | 'unlock'
             if (!email || !email.includes('@')) {
                 return new Response(JSON.stringify({ ok: false, error: "Email inválido" }), { status: 400, headers: baseHeaders });
             }
@@ -28,7 +29,7 @@ export async function handleAuth(request, env) {
 
             const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
 
-            // 2. Guardar en DB
+            // 2. Guardar en DB (usamos una columna 'type' si queremos diferenciar, pero para V1 un token es un token)
             const tokenId = crypto.randomUUID();
             await env.DB.prepare(
                 "INSERT INTO auth_tokens (id, email, token_hash, expires_at) VALUES (?, ?, ?, ?) " +
@@ -36,16 +37,21 @@ export async function handleAuth(request, env) {
             ).bind(tokenId, email.toLowerCase(), tokenHash, expiresAt).run();
 
             // 3. Simular envío de email (log en consola)
-            console.log(`[MAGIC LINK] Token para ${email}: ${rawToken}`);
+            console.log(`[MAGIC CODE] Código para ${email} (${type || 'access'}): ${rawToken}`);
 
-            return new Response(JSON.stringify({ ok: true, message: "Token enviado al correo (Simulado)" }), { status: 200, headers: baseHeaders });
+            return new Response(JSON.stringify({
+                ok: true,
+                message: "Código enviado al correo",
+                debug_token: env.ENVIRONMENT === 'development' ? rawToken : undefined
+            }), { status: 200, headers: baseHeaders });
         }
 
         // ── [POST] /api/v1/auth/verify-token ──────────────────────────────
+        // Verifica el código y crea sesión (o desbloquea sesión si es re-auth)
         if (path === '/api/v1/auth/verify-token') {
-            const { email, token } = await request.json();
+            const { email, token, isUnlock } = await request.json();
             if (!email || !token) {
-                return new Response(JSON.stringify({ ok: false, error: "Email y token requeridos" }), { status: 400, headers: baseHeaders });
+                return new Response(JSON.stringify({ ok: false, error: "Email y código requeridos" }), { status: 400, headers: baseHeaders });
             }
 
             const pepper = env.AUTH_PEPPER || "local_pepper_placeholder";
@@ -57,10 +63,30 @@ export async function handleAuth(request, env) {
             ).bind(email.toLowerCase(), tokenHash).first();
 
             if (!authToken) {
-                return new Response(JSON.stringify({ ok: false, error: "Token inválido o expirado" }), { status: 401, headers: baseHeaders });
+                return new Response(JSON.stringify({ ok: false, error: "Código inválido o expirado" }), { status: 401, headers: baseHeaders });
             }
 
-            // 2. Buscar o crear usuario
+            // 2. Si solo es UNLOCK, actualizamos la sesión actual
+            if (isUnlock) {
+                const authHeader = request.headers.get("Authorization");
+                if (!authHeader) {
+                    return new Response(JSON.stringify({ ok: false, error: "Sesión no encontrada" }), { status: 401, headers: baseHeaders });
+                }
+                const sessionToken = authHeader.split(" ")[1];
+                const sessionHash = await sha256(sessionToken + pepper);
+                const unlockUntil = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+                await env.DB.prepare(
+                    "UPDATE sessions SET unlock_until = ? WHERE token_hash = ?"
+                ).bind(unlockUntil, sessionHash).run();
+
+                // Limpiar token usado
+                await env.DB.prepare("DELETE FROM auth_tokens WHERE email = ?").bind(email.toLowerCase()).run();
+
+                return new Response(JSON.stringify({ ok: true, unlock_until: unlockUntil }), { status: 200, headers: baseHeaders });
+            }
+
+            // 3. Login/Registro: Buscar o crear usuario
             let user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email.toLowerCase()).first();
             let userId = user?.id;
 
@@ -71,7 +97,7 @@ export async function handleAuth(request, env) {
                 user = { id: userId, email: email.toLowerCase() };
             }
 
-            // 3. Crear sesión
+            // 4. Crear sesión
             const sessionId = crypto.randomUUID();
             const rawSessionToken = crypto.randomUUID();
             const sessionHash = await sha256(rawSessionToken + pepper);
@@ -81,13 +107,18 @@ export async function handleAuth(request, env) {
                 "INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)"
             ).bind(sessionId, userId, sessionHash, sessionExpires).run();
 
-            // 4. Limpiar token usado
+            // 5. Limpiar token usado
             await env.DB.prepare("DELETE FROM auth_tokens WHERE email = ?").bind(email.toLowerCase()).run();
 
             return new Response(JSON.stringify({
                 ok: true,
                 token: rawSessionToken,
-                user: { id: userId, email: email.toLowerCase(), name: user.name, avatar: user.avatar }
+                user: {
+                    id: userId,
+                    email: email.toLowerCase(),
+                    name: user.name || email.split('@')[0],
+                    avatar: user.avatar
+                }
             }), { status: 200, headers: baseHeaders });
         }
 
