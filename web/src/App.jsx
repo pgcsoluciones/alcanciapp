@@ -46,6 +46,13 @@ function App() {
     }, [isUnlocked, unlockUntil])
 
     const handleUnlock = (until) => {
+        const unlockDate = until ? new Date(until) : null
+        if (!unlockDate || Number.isNaN(unlockDate.getTime()) || unlockDate <= new Date()) {
+            setUnlockUntil(null)
+            setIsUnlocked(false)
+            return
+        }
+
         setUnlockUntil(until)
         setIsUnlocked(true)
     }

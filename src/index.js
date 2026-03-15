@@ -2,6 +2,7 @@ import { handleOptions, getCorsHeaders } from './lib/cors.js';
 import { handleAnonymousAuth, handleRequestToken, handleVerifyToken } from './routes/auth.js';
 import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
+import { handleProfile } from './routes/profile.js';
 
 export default {
     async fetch(request, env, ctx) {
@@ -58,9 +59,13 @@ export default {
                 return handleGoals(request, env);
             }
 
+            // PROFILE
+            if (path === "/api/v1/profile" || path === "/api/v1/profile/verify-password") {
+                return handleProfile(request, env);
+            }
+
             // TRANSACTIONS DIRETS
             if (path.startsWith("/api/v1/transactions")) {
-                // Sólo soportamos DELETE /api/v1/transactions/:id
                 return handleTransactions(request, env);
             }
 

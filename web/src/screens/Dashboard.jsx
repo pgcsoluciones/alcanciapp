@@ -12,9 +12,16 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
     // Meta más avanzada (por % de progreso)
+    const getProgressRatio = (goal) => {
+        const saved = Number(goal?.total_saved || 0);
+        const target = Number(goal?.target_amount || 0);
+        if (!Number.isFinite(saved) || !Number.isFinite(target) || target <= 0) return 0;
+        return saved / target;
+    };
+
     const topGoal = goals.reduce((best, g) => {
-        const p = Number(g.total_saved || 0) / Number(g.target_amount || 1);
-        const bestP = Number(best.total_saved || 0) / Number(best.target_amount || 1);
+        const p = getProgressRatio(g);
+        const bestP = getProgressRatio(best);
         return p > bestP ? g : best;
     }, goals[0]);
 
@@ -77,7 +84,7 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                         </div>
                     </div>
                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
-                        {Math.round((Number(topGoal.total_saved) / Number(topGoal.target_amount || 1)) * 100)}%
+                        {Math.round(getProgressRatio(topGoal) * 100)}%
                     </div>
                 </button>
             )}
@@ -261,7 +268,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                                     <div onClick={() => isUnlocked ? null : setShowPasswordModal(true)} style={{ cursor: isUnlocked ? 'default' : 'pointer' }}>
                                         <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Equivalente Real</div>
                                         <div style={{ fontWeight: '900', fontSize: '16px', textDecoration: isUnlocked ? 'none' : 'underline dashed', textUnderlineOffset: '4px' }}>
-                                            {isUnlocked ? fmtRD(totalSavedAll, showTotalInUSD ? 'USD' : 'DOP') : 'Ver equivalente'}
+                                            {isUnlocked ? fmtRD(totalSavedAll, showTotalInUSD ? 'USD' : 'DOP') : '🔒 Ver equivalente'}
                                         </div>
                                     </div>
                                     <div>
