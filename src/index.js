@@ -1,5 +1,5 @@
 import { handleOptions, getCorsHeaders } from './lib/cors.js';
-import { handleAnonymousAuth } from './routes/auth.js';
+import { handleAnonymousAuth, handleRequestToken, handleVerifyToken } from './routes/auth.js';
 import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
 
@@ -38,6 +38,14 @@ export default {
             // AUTHENTICATION
             if (path === "/api/v1/auth/anonymous") {
                 return handleAnonymousAuth(request, env);
+            }
+
+            if (path === "/api/v1/auth/request-token") {
+                return handleRequestToken(request, env);
+            }
+
+            if (path === "/api/v1/auth/verify-token") {
+                return handleVerifyToken(request, env);
             }
 
             // GOALS
