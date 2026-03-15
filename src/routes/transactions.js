@@ -2,6 +2,11 @@
 import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
 
+function normalizePathname(pathname) {
+    const collapsed = pathname.replace(/\/+/g, '/');
+    return collapsed.length > 1 ? collapsed.replace(/\/+$/, '') : collapsed;
+}
+
 export async function handleTransactions(request, env) {
     const corsHeaders = getCorsHeaders(request, env);
 
@@ -17,7 +22,7 @@ export async function handleTransactions(request, env) {
     const { userId } = authResult;
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/').filter(Boolean);
-    const normalizedPath = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : url.pathname;
+    const normalizedPath = normalizePathname(url.pathname);
     const method = request.method;
     const baseHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
