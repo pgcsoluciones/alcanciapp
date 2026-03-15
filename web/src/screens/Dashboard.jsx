@@ -12,9 +12,16 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
     // Meta más avanzada (por % de progreso)
+    const getProgressRatio = (goal) => {
+        const saved = Number(goal?.total_saved || 0);
+        const target = Number(goal?.target_amount || 0);
+        if (!Number.isFinite(saved) || !Number.isFinite(target) || target <= 0) return 0;
+        return saved / target;
+    };
+
     const topGoal = goals.reduce((best, g) => {
-        const p = Number(g.total_saved || 0) / Number(g.target_amount || 1);
-        const bestP = Number(best.total_saved || 0) / Number(best.target_amount || 1);
+        const p = getProgressRatio(g);
+        const bestP = getProgressRatio(best);
         return p > bestP ? g : best;
     }, goals[0]);
 
@@ -77,7 +84,7 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                         </div>
                     </div>
                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
-                        {Math.round((Number(topGoal.total_saved) / Number(topGoal.target_amount || 1)) * 100)}%
+                        {Math.round(getProgressRatio(topGoal) * 100)}%
                     </div>
                 </button>
             )}
@@ -89,9 +96,6 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
 export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, onGoToDetail, onOpenMenu, onLogout, onNavigate }) {
     const [goals, setGoals] = useState([]);
     const [transactions, setTransactions] = useState([]);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [verifyPassword, setVerifyPassword] = useState('');
-    const [isVerifying, setIsVerifying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -103,19 +107,21 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
         try {
             const token = localStorage.getItem('alcanciapp:token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [goalsRes, txsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/v1/goals`, { headers }),
-                fetch(`${API_BASE_URL}/api/v1/transactions`, { headers })
-            ]);
-
+            const goalsRes = await fetch(`${API_BASE_URL}/api/v1/goals`, { headers });
             const goalsData = await goalsRes.json();
-            const txsData = await txsRes.json();
 
             if (!goalsRes.ok || !goalsData.ok) throw new Error(goalsData.error || 'Error en metas');
-            if (!txsRes.ok || !txsData.ok) throw new Error(txsData.error || 'Error en transacciones');
-
             setGoals(goalsData.goals || []);
-            setTransactions(txsData.transactions || []);
+
+            const txsRes = await fetch(`${API_BASE_URL}/api/v1/transactions`, { headers });
+            const txsData = await txsRes.json().catch(() => ({}));
+
+            if (txsRes.ok && txsData.ok) {
+                setTransactions(txsData.transactions || []);
+            } else {
+                console.warn('No se pudieron cargar transacciones:', txsData.error || txsRes.statusText);
+                setTransactions([]);
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -262,7 +268,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                                     <div onClick={() => isUnlocked ? null : setShowPasswordModal(true)} style={{ cursor: isUnlocked ? 'default' : 'pointer' }}>
                                         <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Equivalente Real</div>
                                         <div style={{ fontWeight: '900', fontSize: '16px', textDecoration: isUnlocked ? 'none' : 'underline dashed', textUnderlineOffset: '4px' }}>
-                                            {isUnlocked ? fmtRD(totalSavedAll, showTotalInUSD ? 'USD' : 'DOP') : 'Ver equivalente'}
+                                            {isUnlocked ? fmtRD(totalSavedAll, showTotalInUSD ? 'USD' : 'DOP') : '🔒 Ver equivalente'}
                                         </div>
                                     </div>
                                     <div>
