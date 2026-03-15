@@ -89,9 +89,6 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
 export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, onGoToDetail, onOpenMenu, onLogout, onNavigate }) {
     const [goals, setGoals] = useState([]);
     const [transactions, setTransactions] = useState([]);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [verifyPassword, setVerifyPassword] = useState('');
-    const [isVerifying, setIsVerifying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 

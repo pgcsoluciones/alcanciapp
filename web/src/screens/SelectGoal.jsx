@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../lib/config.js';
 import {
     ArrowLeft, Plane, Home, Bike, GraduationCap, Laptop,
     HeartPulse, Briefcase, Target, Star, Gift, Heart,
-    Camera, Car, BookOpen, Hammer, Package
+    Camera, Car, BookOpen, Hammer, Package, PiggyBank, TrendingUp
 } from 'lucide-react';
 
 // ─── Categorías predefinidas ─────────────────────────────────────────────────
