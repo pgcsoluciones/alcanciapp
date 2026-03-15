@@ -1,102 +1,101 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock } from 'lucide-react';
+import { Mail, Key } from 'lucide-react';
 import { AuthCard, AuthInput, AuthButton } from '../components/AuthCard';
+import { API_BASE_URL } from '../lib/config';
 
-export default function Register({ onGoToLogin }) {
-    const [name, setName] = useState('');
+export default function Register({ onLoginSuccess, onGoToLogin }) {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-
+    const [token, setToken] = useState('');
+    const [step, setStep] = useState('email');
     const [error, setError] = useState('');
-    const [info, setInfo] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
+    const handleRequestToken = async (e) => {
         e.preventDefault();
         setError('');
-        setInfo('');
-
-        if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-            setError('Por favor, completa todos los campos.');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setError('Las contraseñas no coinciden.');
+        if (!email.trim() || !email.includes('@')) {
+            setError('Ingresa un correo electrónico válido.');
             return;
         }
 
         setIsLoading(true);
-
         try {
-            // Nota (Gap): La API actual solo tiene /auth/anonymous. 
-            // Documentamos el comportamiento con un mensaje visual agradable.
-            setTimeout(() => {
-                setInfo('¡El registro formal estará disponible pronto! Por ahora inicia sesión para usar el Demo.');
-                setIsLoading(false);
-            }, 1000);
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/request-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.toLowerCase(), type: 'login' })
+            });
 
+            const data = await response.json();
+            if (!response.ok || !data.ok) throw new Error(data.error || 'Error al solicitar código.');
+
+            setStep('token');
         } catch (err) {
-            setError(err.message || 'Error al intentar registrarte.');
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerifyToken = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!token.trim()) {
+            setError('Ingresa el código de 6 dígitos.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.toLowerCase(), token })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.ok) throw new Error(data.error || 'Código incorrecto o expirado.');
+
+            onLoginSuccess(data.token, data.user);
+        } catch (err) {
+            setError(err.message);
+        } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={step === 'email' ? handleRequestToken : handleVerifyToken}>
             <AuthCard
-                title="Crea tu cuenta"
-                subtitle="Comienza a ahorrar para lo que realmente importa"
+                title="Crea tu Alcancía"
+                subtitle={step === 'email' ? "Ingresa tu correo para empezar a ahorrar con PigCoins" : `Ingresa el código enviado a ${email}`}
                 error={error}
-                footerText="¿Ya tienes cuenta?"
-                footerActionText="Inicia sesión"
-                onFooterAction={onGoToLogin}
+                footerText={step === 'email' ? "¿Ya tienes una cuenta?" : "¿No recibiste el código?"}
+                footerActionText={step === 'email' ? "Entra aquí" : "Intentar de nuevo"}
+                onFooterAction={step === 'email' ? onGoToLogin : () => setStep('email')}
             >
-                {info && (
-                    <div style={{ background: '#E3F2FD', color: '#1565C0', padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                        {info}
-                    </div>
+                {step === 'email' ? (
+                    <AuthInput
+                        label="Correo electrónico"
+                        type="email"
+                        placeholder="tucorreo@ejemplo.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        icon={Mail}
+                    />
+                ) : (
+                    <AuthInput
+                        label="Código de 6 dígitos"
+                        type="number"
+                        placeholder="123456"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        icon={Key}
+                    />
                 )}
 
-                <AuthInput
-                    label="Nombre"
-                    type="text"
-                    placeholder="¿Cómo te llamas?"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    icon={User}
-                />
-
-                <AuthInput
-                    label="Correo electrónico"
-                    type="email"
-                    placeholder="tucorreo@ejemplo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    icon={Mail}
-                />
-
-                <AuthInput
-                    label="Contraseña"
-                    type="password"
-                    placeholder="Crea una contraseña segura"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    icon={Lock}
-                />
-
-                <AuthInput
-                    label="Confirmar contraseña"
-                    type="password"
-                    placeholder="Repite tu contraseña"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    icon={Lock}
-                />
-
                 <AuthButton isLoading={isLoading}>
-                    Registrarme
+                    {step === 'email' ? "Empezar ahora" : "Comenzar a ahorrar"}
                 </AuthButton>
             </AuthCard>
         </form>
