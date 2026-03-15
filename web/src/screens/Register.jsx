@@ -23,7 +23,7 @@ export default function Register({ onLoginSuccess, onGoToLogin }) {
             const response = await fetch(`${API_BASE_URL}/api/v1/auth/request-token`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email.toLowerCase(), type: 'login' })
+                body: JSON.stringify({ email: email.toLowerCase(), type: 'register' })
             });
 
             const data = await response.json();

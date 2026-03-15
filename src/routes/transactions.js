@@ -17,12 +17,13 @@ export async function handleTransactions(request, env) {
     const { userId } = authResult;
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/').filter(Boolean);
+    const normalizedPath = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : url.pathname;
     const method = request.method;
     const baseHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
     try {
         // [POST] /api/v1/goals/:id/transactions
-        if (method === 'POST' && pathSegments[2] === 'goals' && pathSegments[4] === 'transactions') {
+        if (method === 'POST' && /^\/api\/v1\/goals\/[^/]+\/transactions$/.test(normalizedPath)) {
             const goalId = pathSegments[3];
             const body = await request.json();
 
@@ -49,7 +50,7 @@ export async function handleTransactions(request, env) {
 
 
         // [GET] /api/v1/goals/:id/transactions
-        if (method === 'GET' && pathSegments[2] === 'goals' && pathSegments[4] === 'transactions') {
+        if (method === 'GET' && /^\/api\/v1\/goals\/[^/]+\/transactions$/.test(normalizedPath)) {
             const goalId = pathSegments[3];
 
             // Por seguridad, filtramos by goal_id y ademas garantizamos que pertenezca con user_id de la sesión
@@ -60,8 +61,17 @@ export async function handleTransactions(request, env) {
             return new Response(JSON.stringify({ ok: true, transactions: results }), { status: 200, headers: baseHeaders });
         }
 
+        // [GET] /api/v1/transactions
+        if (method === 'GET' && normalizedPath === '/api/v1/transactions') {
+            const { results } = await env.DB.prepare(
+                "SELECT * FROM goal_transactions WHERE user_id = ? ORDER BY created_at DESC"
+            ).bind(userId).all();
+
+            return new Response(JSON.stringify({ ok: true, transactions: results }), { status: 200, headers: baseHeaders });
+        }
+
         // [DELETE] /api/v1/transactions/:id
-        if (method === 'DELETE' && pathSegments[2] === 'transactions' && pathSegments.length === 4) {
+        if (method === 'DELETE' && /^\/api\/v1\/transactions\/[^/]+$/.test(normalizedPath)) {
             const txId = pathSegments[3];
 
             const result = await env.DB.prepare(

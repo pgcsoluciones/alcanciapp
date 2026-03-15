@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../lib/config.js';
 import {
     ArrowLeft, Plane, Home, Bike, GraduationCap, Laptop,
     HeartPulse, Briefcase, Target, Star, Gift, Heart,
-    Camera, Car, BookOpen, Hammer, Package
+    Camera, Car, BookOpen, Hammer, Package, PiggyBank, TrendingUp
 } from 'lucide-react';
 
 // ─── Categorías predefinidas ─────────────────────────────────────────────────
@@ -52,6 +52,22 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
     const [customIconId, setCustomIconId] = useState(DEFAULT_CUSTOM_ICON);
 
     const isCustom = selectedGoalId === 'custom';
+
+    const normalizedTargetAmount = Number(targetAmount) || 0;
+    const normalizedDurationMonths = Number(durationMonths) || 1;
+
+    const frequencyConfig = {
+        'Diario': { periodsPerMonth: 30, label: 'día' },
+        'Semanal': { periodsPerMonth: 4, label: 'semana' },
+        'Quincenal': { periodsPerMonth: 2, label: 'quincena' },
+        'Mensual': { periodsPerMonth: 1, label: 'mes' }
+    };
+
+    const selectedFrequency = frequencyConfig[frequency] || frequencyConfig['Mensual'];
+    const totalPeriods = Math.max(1, Math.round(normalizedDurationMonths * selectedFrequency.periodsPerMonth));
+    const feePerPeriod = normalizedTargetAmount > 0
+        ? Math.ceil(normalizedTargetAmount / totalPeriods)
+        : 0;
 
     const handleSelectCategory = (id) => {
         setSelectedGoalId(id);
@@ -383,9 +399,9 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                         <div>
-                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700', textTransform: 'uppercase' }}>Tu cuota será:</span>
+                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700', textTransform: 'uppercase' }}>Tu cuota por {selectedFrequency.label} será:</span>
                             <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827' }}>
-                                {currency} {targetAmount > 0 ? Math.ceil(targetAmount / (durationMonths || 1)).toLocaleString() : '0'}
+                                {currency} {feePerPeriod.toLocaleString()}
                             </div>
                         </div>
                         <div>
@@ -397,7 +413,7 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                     </div>
 
                     <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #A7F3D0', fontSize: '12px', color: '#065F46', lineHeight: '1.4', fontWeight: '600' }}>
-                        💡 Cada vez que completes tu cuota de <strong>{currency} {targetAmount > 0 ? Math.ceil(targetAmount / (durationMonths || 1)).toLocaleString() : '0'}</strong>, ganarás exactamente <strong>1 PigCoin</strong>. ¡Así de fácil es medir tu disciplina!
+                        💡 Cada vez que completes tu cuota de <strong>{currency} {feePerPeriod.toLocaleString()}</strong> por <strong>{selectedFrequency.label}</strong>, ganarás exactamente <strong>1 PigCoin</strong>. En {normalizedDurationMonths} meses tendrás <strong>{totalPeriods}</strong> períodos de aporte.
                     </div>
                 </div>
 

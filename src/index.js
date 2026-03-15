@@ -1,7 +1,8 @@
 import { handleOptions, getCorsHeaders } from './lib/cors.js';
-import { handleAnonymousAuth } from './routes/auth.js';
+import { handleAnonymousAuth, handleRequestToken, handleVerifyToken } from './routes/auth.js';
 import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
+import { handleProfile } from './routes/profile.js';
 
 export default {
     async fetch(request, env, ctx) {
@@ -11,6 +12,7 @@ export default {
 
         const url = new URL(request.url);
         const path = url.pathname;
+        const normalizedPath = path.length > 1 ? path.replace(/\/+$/, "") : path;
         const method = request.method;
 
         const baseHeaders = { ...getCorsHeaders(request, env), "Content-Type": "application/json" };
@@ -40,19 +42,31 @@ export default {
                 return handleAnonymousAuth(request, env);
             }
 
+            if (path === "/api/v1/auth/request-token") {
+                return handleRequestToken(request, env);
+            }
+
+            if (path === "/api/v1/auth/verify-token") {
+                return handleVerifyToken(request, env);
+            }
+
             // GOALS
-            if (path.startsWith("/api/v1/goals")) {
+            if (normalizedPath.startsWith("/api/v1/goals")) {
                 // Delegamos /api/v1/goals... a su handler
                 // Transacciones atadas a goals: POST /api/v1/goals/:id/transactions
-                if (path.includes("/transactions")) {
+                if (normalizedPath.includes("/transactions")) {
                     return handleTransactions(request, env);
                 }
                 return handleGoals(request, env);
             }
 
+            // PROFILE
+            if (normalizedPath === "/api/v1/profile" || normalizedPath === "/api/v1/profile/verify-password") {
+                return handleProfile(request, env);
+            }
+
             // TRANSACTIONS DIRETS
-            if (path.startsWith("/api/v1/transactions")) {
-                // Sólo soportamos DELETE /api/v1/transactions/:id
+            if (normalizedPath === "/api/v1/transactions" || normalizedPath.startsWith("/api/v1/transactions/")) {
                 return handleTransactions(request, env);
             }
 

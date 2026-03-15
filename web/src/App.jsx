@@ -46,6 +46,13 @@ function App() {
     }, [isUnlocked, unlockUntil])
 
     const handleUnlock = (until) => {
+        const unlockDate = until ? new Date(until) : null
+        if (!unlockDate || Number.isNaN(unlockDate.getTime()) || unlockDate <= new Date()) {
+            setUnlockUntil(null)
+            setIsUnlocked(false)
+            return
+        }
+
         setUnlockUntil(until)
         setIsUnlocked(true)
     }
@@ -88,10 +95,15 @@ function App() {
                 />
             )}
 
-            {currentView === 'login' || currentView === 'register' ? (
+            {currentView === 'login' ? (
                 <Login
                     onLoginSuccess={handleLoginSuccess}
-                    onGoToRegister={() => setCurrentView('login')}
+                    onGoToRegister={() => setCurrentView('register')}
+                />
+            ) : currentView === 'register' ? (
+                <Register
+                    onLoginSuccess={handleLoginSuccess}
+                    onGoToLogin={() => setCurrentView('login')}
                 />
             ) : currentView === 'dashboard' ? (
                 <Dashboard
@@ -148,4 +160,3 @@ function App() {
 }
 
 export default App;
-
