@@ -1,5 +1,5 @@
 import { Clock, Lock, Globe, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Target, TrendingUp, Timer } from 'lucide-react';
-import { getSuggestedQuota, getRhythmStatus, fmtRD, getPigCoins, getCountdown, fmtPigCoin } from '../lib/savingsCalc';
+import { getSuggestedQuota, getRhythmStatus, fmtRD, getPigCoins, getCountdownStatus, fmtPigCoin } from '../lib/savingsCalc';
 
 const iconMap = {
     'vacation': Plane,
@@ -11,17 +11,16 @@ const iconMap = {
     'business': Briefcase,
 };
 
-export default function GoalCard({ goal, onClick }) {
+export default function GoalCard({ goal, isUnlocked, onClick }) {
     const hasTarget = typeof goal.target_amount === 'number' && goal.target_amount > 0;
     const totalSaved = Number(goal.total_saved || 0);
     const progressPercent = hasTarget ? Math.min((totalSaved / goal.target_amount) * 100, 100) : 0;
     const IconComponent = iconMap[goal.icon] || Target;
 
     const transactions = goal._transactions || [];
-    const quota = hasTarget ? getSuggestedQuota(goal) : 0;
     const rhythm = hasTarget ? getRhythmStatus(goal, transactions) : null;
     const pigCoins = hasTarget ? getPigCoins(goal, transactions) : 0;
-    const countdown = getCountdown(goal, transactions);
+    const countdown = getCountdownStatus(goal, transactions);
 
     return (
         <div
@@ -48,10 +47,10 @@ export default function GoalCard({ goal, onClick }) {
             }}
         >
             {/* Countdown Floating Tag */}
-            {countdown.totalSeconds > 0 && (
-                <div style={{ position: 'absolute', top: 0, right: 0, background: '#10B981', color: 'white', padding: '4px 12px', fontSize: '10px', fontWeight: '800', borderBottomLeftRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {countdown.status !== 'idle' && (
+                <div style={{ position: 'absolute', top: 0, right: 0, background: countdown.status === 'on_track' ? '#10B981' : '#F59E0B', color: 'white', padding: '4px 12px', fontSize: '10px', fontWeight: '800', borderBottomLeftRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Timer size={10} />
-                    {countdown.days > 0 ? `${countdown.days}d ` : ''}{countdown.hours}h {countdown.minutes}m
+                    {countdown.label.includes('vence en') ? countdown.label.split('vence en')[1].trim() : countdown.status.toUpperCase()}
                 </div>
             )}
 
@@ -88,14 +87,14 @@ export default function GoalCard({ goal, onClick }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
                         <div>
                             <div style={{ fontSize: '20px', fontWeight: '900', color: '#111827' }}>
-                                🐷 {fmtPigCoin(pigCoins)}
+                                {fmtPigCoin(pigCoins)}
                             </div>
                             <div style={{ color: '#10B981', fontSize: '12px', fontWeight: '700', marginTop: '2px', opacity: 0.8 }}>
-                                Acumulados hoy
+                                {isUnlocked ? fmtRD(totalSaved, goal.currency) : 'Total PigCoins'}
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <span style={{ color: '#9CA3AF', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' }}>Objetivo alcanzado</span>
+                            <span style={{ color: '#9CA3AF', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase' }}>Objetivo</span>
                             <div style={{ fontSize: '18px', fontWeight: '900', color: '#10B981' }}>
                                 {Math.round(progressPercent)}%
                             </div>
@@ -118,7 +117,7 @@ export default function GoalCard({ goal, onClick }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <TrendingUp size={14} color="#10B981" />
                             <span style={{ fontSize: '11px', color: '#4B5563', fontWeight: '600' }}>
-                                Cuota: {goal.currency || 'DOP'} <span style={{ color: '#111827', filter: 'blur(3px)' }}>88,888</span>
+                                Cuota: <span style={{ color: '#111827', fontWeight: '800' }}>1.00 🐷</span>
                             </span>
                         </div>
                         <span style={{ fontSize: '10px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase' }}>
@@ -128,7 +127,7 @@ export default function GoalCard({ goal, onClick }) {
                 </div>
             ) : (
                 <div style={{ fontSize: '20px', fontWeight: '900', color: '#111827' }}>
-                    Ahorrado: {fmtRD(totalSaved)}
+                    {fmtPigCoin(totalSaved / (goal.target_amount || 250))}
                 </div>
             )}
         </div>

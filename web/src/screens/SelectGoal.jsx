@@ -371,21 +371,49 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                     )}
                 </div>
 
+                {/* Resumen Calculado y PigCoins */}
+                <div style={{ background: '#ECFDF5', border: '2px solid #10B981', borderRadius: '16px', padding: '20px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.1 }}>
+                        <PiggyBank size={80} color="#10B981" />
+                    </div>
+
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#065F46', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+                        <TrendingUp size={16} /> Tu Plan de Ahorro
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div>
+                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700', textTransform: 'uppercase' }}>Tu cuota será:</span>
+                            <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827' }}>
+                                {currency} {targetAmount > 0 ? Math.ceil(targetAmount / (durationMonths || 1)).toLocaleString() : '0'}
+                            </div>
+                        </div>
+                        <div>
+                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700', textTransform: 'uppercase' }}>Equivale a:</span>
+                            <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                1.00 <span style={{ fontSize: '12px', background: '#FFD700', color: '#856404', padding: '2px 6px', borderRadius: '6px', fontWeight: '900' }}>PigCoin</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #A7F3D0', fontSize: '12px', color: '#065F46', lineHeight: '1.4', fontWeight: '600' }}>
+                        💡 Cada vez que completes tu cuota de <strong>{currency} {targetAmount > 0 ? Math.ceil(targetAmount / (durationMonths || 1)).toLocaleString() : '0'}</strong>, ganarás exactamente <strong>1 PigCoin</strong>. ¡Así de fácil es medir tu disciplina!
+                    </div>
+                </div>
+
                 {/* CTA */}
                 <button
                     onClick={handleCreateGoal}
-                    disabled={isLoading}
+                    disabled={isLoading || !targetAmount || targetAmount <= 0}
                     style={{
-                        width: '100%', height: '56px', backgroundColor: '#10B981', color: 'white',
-                        border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 'bold',
-                        cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1,
+                        width: '100%', height: '60px', backgroundColor: (isLoading || !targetAmount) ? '#D1D5DB' : '#10B981', color: 'white',
+                        border: 'none', borderRadius: '18px', fontSize: '18px', fontWeight: '900',
+                        cursor: (isLoading || !targetAmount) ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)', transition: 'transform 0.1s'
+                        boxShadow: (isLoading || !targetAmount) ? 'none' : '0 10px 20px rgba(16, 185, 129, 0.3)', transition: 'all 0.2s'
                     }}
-                    onMouseDown={(e) => !isLoading && (e.currentTarget.style.transform = 'scale(0.98)')}
-                    onMouseUp={(e) => !isLoading && (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                    {isLoading ? 'Creando...' : 'Crear Meta'}
+                    {isLoading ? 'Creando...' : 'Comenzar a Ahorrar 🚀'}
                 </button>
             </div>
 

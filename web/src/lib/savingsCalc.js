@@ -40,20 +40,28 @@ export function getPigCoinProgress(goal, transactions) {
 }
 
 /**
- * Calcula el tiempo restante para el próximo aporte esperado.
+ * Calcula el tiempo restante y devuelve un objeto de estado contextual.
  * @param {Object} goal
  * @param {Array} transactions
- * @param {Date} [currentNow] - Opcional, fecha actual
- * @returns {{ days: number, hours: number, minutes: number, totalSeconds: number }}
+ * @returns {{ label: string, totalSeconds: number, status: string }}
  */
-export function getCountdown(goal, transactions, currentNow) {
-    if (!goal.created_at) return { days: 0, hours: 0, minutes: 0, totalSeconds: 0 };
+export function getCountdownStatus(goal, transactions) {
+    if (!goal.created_at) return { label: 'Iniciando...', totalSeconds: 0, status: 'idle' };
+
+    const rhythm = getRhythmStatus(goal, transactions);
+    if (rhythm.status === 'completed') {
+        return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
+    }
+
+    if (rhythm.status === 'ahead') {
+        return { label: 'Vas adelantado. Ya sumaste tu próximo PigCoin antes de tiempo.', totalSeconds: 0, status: 'ahead' };
+    }
 
     // Base: Último aporte o fecha de creación
-    let lastAporteDate = new Date(goal.created_at);
-    if (transactions && Array.isArray(transactions) && transactions.length > 0) {
+    let baseDate = new Date(goal.created_at);
+    if (transactions && transactions.length > 0) {
         const sorted = [...transactions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        lastAporteDate = new Date(sorted[0].created_at);
+        baseDate = new Date(sorted[0].created_at);
     }
 
     const freq = (goal.frequency || 'Mensual').toLowerCase();
@@ -62,21 +70,29 @@ export function getCountdown(goal, transactions, currentNow) {
     if (freq.includes('quincenal')) intervalDays = 15;
     if (freq.includes('diario')) intervalDays = 1;
 
-    const nextAporteDate = new Date(lastAporteDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
-    const now = currentNow || new Date();
+    const nextAporteDate = new Date(baseDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
+    const now = new Date();
     const diffMs = nextAporteDate - now;
 
-    if (diffMs <= 0) return { days: 0, hours: 0, minutes: 0, totalSeconds: 0 };
+    if (diffMs <= 0) {
+        if (rhythm.status === 'behind') {
+            return { label: '¡Oportunidad vencida! Haz un aporte para recuperarte.', totalSeconds: 0, status: 'behind' };
+        }
+        return { label: `Hoy toca sumar tu PigCoin de la ${getFreqLabel(goal.frequency)}.`, totalSeconds: 0, status: 'due' };
+    }
 
     const totalSeconds = Math.floor(diffMs / 1000);
-    const days = Math.floor(totalSeconds / (24 * 3600));
-    const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const d = Math.floor(totalSeconds / (24 * 3600));
+    const h = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
 
-    return { days, hours, minutes, totalSeconds };
+    const timeStr = d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`;
+    return {
+        label: `Tu próxima oportunidad de sumar 1 PigCoin vence en ${timeStr}`,
+        totalSeconds,
+        status: 'on_track'
+    };
 }
-
-// ─── Estado del Ritmo ──────────────────────────────────────────────────────
 
 /**
  * Evalúa si el usuario está al día, adelantado o atrasado.
@@ -97,12 +113,12 @@ export function getRhythmStatus(goal, transactions) {
         return { status: 'completed', label: 'Completada', emoji: '🏆', color: '#059669', bg: '#ECFDF5' };
     }
 
+    const pigCoins = getPigCoins(goal, transactions);
+    const elapsed = getPeriodsElapsed(goal);
+
     if (totalSaved === 0) {
         return { status: 'not_started', label: 'Sin iniciar', emoji: '🏁', color: '#6B7280', bg: '#F3F4F6' };
     }
-
-    const pigCoins = getPigCoins(goal, transactions);
-    const elapsed = getPeriodsElapsed(goal);
 
     if (pigCoins >= elapsed + 1) {
         return { status: 'ahead', label: 'Adelantado', emoji: '🚀', color: '#059669', bg: '#ECFDF5' };
@@ -250,8 +266,7 @@ export function getMotivationalMessage(goal, transactions) {
     if (progress >= 100) return '¡Felicidades! Meta cumplida. 🏆';
 
     if (status.status === 'behind') {
-        const missing = fmtRD(prog.remainingRD);
-        return `⚠️ Estás un poco atrás. Con ${missing} completas tu próximo PigCoin y te pones al día.`;
+        return `⚠️ Estás un poco atrás. ¡Haz un aporte para completar tu próximo PigCoin y ponerte al día!`;
     }
 
     if (status.status === 'ahead') {
@@ -259,8 +274,7 @@ export function getMotivationalMessage(goal, transactions) {
     }
 
     if (prog.current > 0) {
-        const missing = fmtRD(prog.remainingRD);
-        return `Llevas ${fmtPigCoin(prog.current)} acumulados. ¡Solo faltan ${missing} para otro 🐷!`;
+        return `Llevas ${fmtPigCoin(prog.current)} acumulados en este periodo. ¡Sigue así! 🐷`;
     }
 
     return 'Tu disciplina financiera rinde frutos. ¡Haz tu primer aporte!';
@@ -272,6 +286,7 @@ export function getMotivationalMessage(goal, transactions) {
 
 /**
  * Calcula la cuota sugerida (monto total / meses en la frecuencia elegida).
+ * Redondea siempre hacia arriba al entero siguiente.
  */
 export function getSuggestedQuota(goal) {
     if (!goal.target_amount || !goal.duration_months) return 0;
@@ -281,7 +296,8 @@ export function getSuggestedQuota(goal) {
     if (freq.includes('semanal')) divisor *= 4.34;
     if (freq.includes('diario')) divisor *= 30.42;
 
-    return Number((goal.target_amount / divisor).toFixed(2));
+    const rawQuota = goal.target_amount / divisor;
+    return Math.ceil(rawQuota); // Redondeo hacia arriba solicitado
 }
 
 /**
@@ -289,10 +305,10 @@ export function getSuggestedQuota(goal) {
  */
 export function getFreqLabel(freq) {
     const f = (freq || 'Mensual').toLowerCase();
-    if (f === 'diario') return 'día';
-    if (f === 'semanal') return 'semana';
-    if (f === 'quincenal') return 'quincena';
-    return 'mes';
+    if (f === 'diario') return 'diario';
+    if (f === 'semanal') return 'semanal';
+    if (f === 'quincenal') return 'quincenal';
+    return 'mensual';
 }
 
 /**
@@ -337,8 +353,9 @@ export function getPeriodsElapsed(goal) {
     return Math.floor(diffMs / msInPeriod);
 }
 
-export function fmtRD(amount) {
-    return `RD$ ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+export function fmtRD(amount, currency = 'DOP') {
+    const prefix = currency === 'USD' ? '$' : 'RD$ ';
+    return `${prefix}${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
 }
 
 export function fmtPigCoin(amount) {

@@ -1,81 +1,101 @@
 import React, { useState } from 'react';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Key } from 'lucide-react';
 import { AuthCard, AuthInput, AuthButton } from '../components/AuthCard';
 import { API_BASE_URL } from '../lib/config';
 
 export default function Login({ onLoginSuccess, onGoToRegister }) {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [token, setToken] = useState('');
+    const [step, setStep] = useState('email'); // 'email' o 'token'
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
+    const handleRequestToken = async (e) => {
         e.preventDefault();
         setError('');
-
-        if (!email.trim() || !password) {
-            setError('Por favor, ingresa tu correo y contraseña.');
+        if (!email.trim() || !email.includes('@')) {
+            setError('Ingresa un correo electrónico válido.');
             return;
         }
 
         setIsLoading(true);
-
         try {
-            // Actualmente la API solo soporta login anónimo / auth genérico para demo
-            // Se envía este POST real para simular el inicio y obtener un token válido
-            const response = await fetch(`${API_BASE_URL}/api/v1/auth/anonymous`, {
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/request-token`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.toLowerCase() })
             });
 
             const data = await response.json();
+            if (!response.ok || !data.ok) throw new Error(data.error || 'Error al solicitar token.');
 
-            if (!response.ok || !data.ok) {
-                throw new Error(data.error || 'Error al conectar con el servidor.');
-            }
-
-            // Exito: Guardar sesión
-            onLoginSuccess(data.token, data.user);
-
+            setStep('token');
         } catch (err) {
-            setError(err.message || 'Error de conexión.');
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerifyToken = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!token.trim()) {
+            setError('Por favor, ingresa el código de 6 dígitos.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.toLowerCase(), token })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.ok) throw new Error(data.error || 'Código incorrecto o expirado.');
+
+            onLoginSuccess(data.token, data.user);
+        } catch (err) {
+            setError(err.message);
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={step === 'email' ? handleRequestToken : handleVerifyToken}>
             <AuthCard
-                title="Bienvenido de nuevo"
-                subtitle="Ingresa para ver el progreso de tus metas"
+                title={step === 'email' ? "Acceso Mágico" : "Verifica tu cuenta"}
+                subtitle={step === 'email' ? "Ingresa tu correo para recibir un código de acceso" : `Hemos enviado un código a ${email}`}
                 error={error}
-                footerText="¿No tienes una cuenta?"
-                footerActionText="Regístrate"
-                onFooterAction={onGoToRegister}
+                footerText={step === 'email' ? "¿No tienes una cuenta?" : "¿No recibiste el código?"}
+                footerActionText={step === 'email' ? "Regístrate aquí" : "Intentar de nuevo"}
+                onFooterAction={step === 'email' ? onGoToRegister : () => setStep('email')}
             >
-                <AuthInput
-                    label="Correo electrónico"
-                    type="email"
-                    placeholder="tucorreo@ejemplo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    icon={Mail}
-                />
-
-                <AuthInput
-                    label="Contraseña"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    icon={Lock}
-                />
+                {step === 'email' ? (
+                    <AuthInput
+                        label="Correo electrónico"
+                        type="email"
+                        placeholder="tucorreo@ejemplo.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        icon={Mail}
+                    />
+                ) : (
+                    <AuthInput
+                        label="Código de 6 dígitos"
+                        type="number"
+                        placeholder="123456"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        icon={Key}
+                    />
+                )}
 
                 <AuthButton isLoading={isLoading}>
-                    Iniciar Sesión
+                    {step === 'email' ? "Enviar Código" : "Ingresar a AlcanciApp"}
                 </AuthButton>
             </AuthCard>
         </form>

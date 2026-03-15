@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Target, Zap, TrendingUp, Award, Menu, Coins } from 'lucide-react';
+import { Plus, Target, Zap, TrendingUp, Award, Menu, Coins, Lock } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
 import { API_BASE_URL } from '../lib/config';
@@ -7,42 +7,36 @@ import { ASSET } from '../lib/assets';
 import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD, getPigCoins, getAchievements, fmtPigCoin } from '../lib/savingsCalc';
 
 // ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
+// ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
 function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
     // Meta más avanzada (por % de progreso)
-    const goalsWithTarget = goals.filter(g => g.target_amount > 0);
-    const topGoal = goalsWithTarget.length > 0
-        ? goalsWithTarget.reduce((best, g) => {
-            const p = Number(g.total_saved || 0) / Number(g.target_amount);
-            const bestP = Number(best.total_saved || 0) / Number(best.target_amount);
-            return p > bestP ? g : best;
-        }, goalsWithTarget[0])
-        : null;
+    const topGoal = goals.reduce((best, g) => {
+        const p = Number(g.total_saved || 0) / Number(g.target_amount || 1);
+        const bestP = Number(best.total_saved || 0) / Number(best.target_amount || 1);
+        return p > bestP ? g : best;
+    }, goals[0]);
 
-    const totalNextQuota = goals.reduce((sum, g) => sum + getSuggestedQuota(g), 0);
-    const quotaLabel = goals.length === 1
-        ? `por ${getFreqLabel(goals[0].frequency)}`
-        : goals.every(g => getFreqLabel(g.frequency) === getFreqLabel(goals[0].frequency))
-            ? `por ${getFreqLabel(goals[0].frequency)}`
-            : 'por período';
+    // Cuota Global en PigCoins (Sumatoria de lo que representa 1 cuota de cada meta)
+    const totalNextPigCoins = goals.length; // 1 PC por cada meta activa
 
     // Ritmo global
     const rhythms = goals.map(g => getRhythmStatus(g, transactions.filter(t => t.goal_id === g.id)));
     const hasBehind = rhythms.some(r => r.status === 'behind');
     const allNotStarted = rhythms.every(r => r.status === 'not_started' || r.status === 'no_target');
-    const hasAhead = !hasBehind && rhythms.some(r => r.status === 'ahead');
+    const hasAhead = rhythms.some(r => r.status === 'ahead');
     const allCompleted = rhythms.every(r => r.status === 'completed');
 
     const globalRhythm = allCompleted
-        ? { label: 'Todas completadas', emoji: '🏆', color: '#059669', bg: '#ECFDF5' }
+        ? { label: '¡Eres un crack!', emoji: '🏆', color: '#059669', bg: '#ECFDF5' }
         : allNotStarted
-            ? { label: 'Sin aportes aún', emoji: '🏁', color: '#6B7280', bg: '#F3F4F6' }
+            ? { label: 'Paso a paso', emoji: '🏁', color: '#6B7280', bg: '#F3F4F6' }
             : hasBehind
-                ? { label: 'Atrasado en una meta', emoji: '⚠️', color: '#D97706', bg: '#FFFBEB' }
+                ? { label: 'Ponte al día', emoji: '⚠️', color: '#D97706', bg: '#FFFBEB' }
                 : hasAhead
-                    ? { label: 'Vas adelantado', emoji: '🚀', color: '#059669', bg: '#ECFDF5' }
-                    : { label: 'Al día', emoji: '✅', color: '#2563EB', bg: '#EFF6FF' };
+                    ? { label: 'Vas volando', emoji: '🚀', color: '#059669', bg: '#ECFDF5' }
+                    : { label: 'Buen ritmo', emoji: '✅', color: '#2563EB', bg: '#EFF6FF' };
 
     return (
         <div style={{ background: 'white', border: '1px solid #F3F4F6', borderRadius: '24px', padding: '24px', marginBottom: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
@@ -54,11 +48,10 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                 <div style={{ background: '#F9FAFB', borderRadius: '18px', padding: '16px', border: '1px solid #F3F4F6' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                         <Zap size={14} color="#10B981" />
-                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#6B7280', textTransform: 'uppercase' }}>Próxima Cuota</span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#6B7280', textTransform: 'uppercase' }}>Próximo Reto</span>
                     </div>
-                    {/* V1: Solo mostrar en PigCoin por defecto */}
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827' }}>{(totalNextQuota / 250).toFixed(2)} 🐷</div>
-                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', fontWeight: '600' }}>Meta combinada</div>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#111827' }}>{totalNextPigCoins.toFixed(2)} 🐷</div>
+                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', fontWeight: '600' }}>Inversión en disciplina</div>
                 </div>
 
                 <div style={{ background: globalRhythm.bg, borderRadius: '18px', padding: '16px', border: `1px solid ${globalRhythm.bg}` }}>
@@ -71,7 +64,7 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                 </div>
             </div>
 
-            {topGoal && Number(topGoal.total_saved) > 0 && (
+            {topGoal && (
                 <button
                     onClick={() => onGoToDetail(topGoal.id)}
                     style={{ marginTop: '16px', width: '100%', background: '#F0FDF4', border: '1px solid #DCFCE7', borderRadius: '18px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.2s ease' }}
@@ -79,12 +72,12 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <Award size={18} color="#10B981" />
                         <div>
-                            <div style={{ fontSize: '10px', color: '#059669', fontWeight: '800', textTransform: 'uppercase' }}>Meta Estrella</div>
+                            <div style={{ fontSize: '10px', color: '#059669', fontWeight: '800', textTransform: 'uppercase' }}>Meta Líder</div>
                             <div style={{ fontSize: '15px', fontWeight: '900', color: '#111827' }}>{topGoal.name}</div>
                         </div>
                     </div>
                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
-                        {Math.round((Number(topGoal.total_saved) / Number(topGoal.target_amount)) * 100)}%
+                        {Math.round((Number(topGoal.total_saved) / Number(topGoal.target_amount || 1)) * 100)}%
                     </div>
                 </button>
             )}
@@ -93,9 +86,12 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
 }
 
 // ─── Dashboard Principal ────────────────────────────────────────────────────
-export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu }) {
+export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, onGoToDetail, onOpenMenu, onLogout, onNavigate }) {
     const [goals, setGoals] = useState([]);
     const [transactions, setTransactions] = useState([]);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [verifyPassword, setVerifyPassword] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -131,6 +127,9 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
     const validGoals = Array.isArray(goals) ? goals : [];
     const validTransactions = Array.isArray(transactions) ? transactions : [];
 
+    // Total ahorrado consolidado (Solo si todas las metas son misma moneda)
+    const currencies = [...new Set(validGoals.map(g => g.currency || 'DOP'))];
+    const showTotalInUSD = currencies.length === 1 && currencies[0] === 'USD';
     const totalSavedAll = validGoals.reduce((acc, g) => acc + (Number(g.total_saved) || 0), 0);
 
     const totalPigCoins = validGoals.reduce((acc, g) => {
@@ -139,7 +138,7 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
         return acc + (isNaN(pc) ? 0 : pc);
     }, 0);
 
-    // Obtener insignias únicas de todas las metas
+    // Obtener insignias reales
     const allBadges = [];
     validGoals.forEach(g => {
         const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
@@ -152,7 +151,31 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
             });
         }
     });
-    const recentBadges = allBadges.slice(0, 5);
+    const recentBadges = [...allBadges].reverse().slice(0, 5);
+
+    const handleVerifyPassword = async () => {
+        setIsVerifying(true);
+        try {
+            const token = localStorage.getItem('alcanciapp:token');
+            const res = await fetch(`${API_BASE_URL}/api/v1/profile/verify-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ password: verifyPassword })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                onUnlock();
+                setShowPasswordModal(false);
+            } else {
+                alert(data.error || 'Contraseña incorrecta');
+            }
+        } catch (e) {
+            alert('Error de conexión');
+        } finally {
+            setIsVerifying(false);
+            setVerifyPassword('');
+        }
+    };
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px', boxSizing: 'border-box' }}>
@@ -178,7 +201,7 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
 
                 {isLoading ? (
                     <div style={{ textAlign: 'center', padding: '60px', color: '#9CA3AF', fontSize: '15px', fontWeight: '700' }}>Cargando tu panel...</div>
-                ) : goals.length === 0 ? (
+                ) : validGoals.length === 0 ? (
                     <EmptyGoalsState onCreateClick={onGoToCreate} />
                 ) : (
                     <>
@@ -194,7 +217,7 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                                     ¡Hola, {user?.name || 'Ahorrador'}! 👋
                                 </div>
                                 <p style={{ color: '#6B7280', fontSize: '14px', marginTop: '4px', marginBottom: 0, fontWeight: '600' }}>
-                                    Tu progreso es increíble <strong style={{ color: '#10B981' }}>🐷{fmtPigCoin(totalPigCoins)}</strong>
+                                    Tu progreso actual: <strong style={{ color: '#10B981' }}>{fmtPigCoin(totalPigCoins)}</strong>
                                 </p>
                             </div>
                         </div>
@@ -208,9 +231,11 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                                     <div style={{ fontSize: '28px', marginBottom: '4px' }}>🐷</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '18px' }}>
-                                    <div onClick={() => alert('Próximamente: Ingresa contraseña para ver moneda real')} style={{ cursor: 'pointer' }}>
+                                    <div onClick={() => isUnlocked ? null : setShowPasswordModal(true)} style={{ cursor: isUnlocked ? 'default' : 'pointer' }}>
                                         <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Equivalente Real</div>
-                                        <div style={{ fontWeight: '900', fontSize: '16px', textDecoration: 'underline dashed', textUnderlineOffset: '4px' }}>VER MONTO</div>
+                                        <div style={{ fontWeight: '900', fontSize: '16px', textDecoration: isUnlocked ? 'none' : 'underline dashed', textUnderlineOffset: '4px' }}>
+                                            {isUnlocked ? fmtRD(totalSavedAll, showTotalInUSD ? 'USD' : 'DOP') : 'Ver equivalente'}
+                                        </div>
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Insignias</div>
@@ -224,7 +249,7 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                         </div>
 
                         {/* Resumen Inteligente */}
-                        <DashboardInsights goals={goals} transactions={transactions} onGoToDetail={onGoToDetail} />
+                        <DashboardInsights goals={validGoals} transactions={validTransactions} onGoToDetail={onGoToDetail} />
 
                         {/* Insignias Recientes */}
                         {recentBadges.length > 0 && (
@@ -240,7 +265,7 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                                             <img src={ASSET.badge(b.icon)} alt={b.label} style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
                                         </div>
                                     ))}
-                                    <button onClick={onGoToCreate} style={{ flexShrink: 0, width: '64px', height: '64px', background: '#F3F4F6', borderRadius: '50%', border: '2px dashed #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                    <button onClick={() => onNavigate('achievements')} style={{ flexShrink: 0, width: '64px', height: '64px', background: '#F3F4F6', borderRadius: '50%', border: '2px dashed #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                                         <Plus size={24} color="#9CA3AF" />
                                     </button>
                                 </div>
@@ -251,10 +276,11 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                         <div style={{ marginBottom: '12px', paddingLeft: '4px' }}>
                             <h2 style={{ fontSize: '17px', color: '#111827', fontWeight: '900' }}>Tus Planes</h2>
                         </div>
-                        {goals.map(goal => (
+                        {validGoals.map(goal => (
                             <GoalCard
                                 key={goal.id}
-                                goal={{ ...goal, _transactions: transactions.filter(t => t.goal_id === goal.id) }}
+                                isUnlocked={isUnlocked}
+                                goal={{ ...goal, _transactions: validTransactions.filter(t => t.goal_id === goal.id) }}
                                 onClick={() => onGoToDetail(goal.id)}
                             />
                         ))}
@@ -272,6 +298,42 @@ export default function Dashboard({ user, onGoToCreate, onGoToDetail, onOpenMenu
                     </>
                 )}
             </div>
+
+            {/* Modal de Contraseña Dashboard */}
+            {showPasswordModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: 'white', width: '100%', maxWidth: '340px', borderRadius: '24px', padding: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                            <div style={{ width: '50px', height: '50px', background: '#F0FDF4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                                <Lock size={24} color="#10B981" />
+                            </div>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#111827' }}>Validación de Seguridad</h3>
+                            <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '6px', fontWeight: '600' }}>Ingresa tu contraseña para ver montos reales</p>
+                        </div>
+                        <input
+                            type="password"
+                            placeholder="Contraseña"
+                            value={verifyPassword}
+                            onChange={(e) => setVerifyPassword(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                            style={{ width: '100%', padding: '16px', borderRadius: '14px', border: '1px solid #E5E7EB', outline: 'none', fontSize: '16px', boxSizing: 'border-box', textAlign: 'center' }}
+                        />
+                        <button
+                            onClick={handleVerifyPassword}
+                            disabled={isVerifying || !verifyPassword}
+                            style={{ width: '100%', background: (isVerifying || !verifyPassword) ? '#9CA3AF' : '#111827', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: (isVerifying || !verifyPassword) ? 'not-allowed' : 'pointer', marginTop: '16px' }}
+                        >
+                            {isVerifying ? 'Verificando...' : 'Confirmar'}
+                        </button>
+                        <button
+                            onClick={() => setShowPasswordModal(false)}
+                            style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', fontWeight: '700', padding: '12px', marginTop: '4px', cursor: 'pointer' }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

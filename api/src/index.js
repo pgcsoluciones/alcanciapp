@@ -1,5 +1,5 @@
 import { handleOptions, getCorsHeaders } from './lib/cors.js';
-import { handleAnonymousAuth } from './routes/auth.js';
+import { handleAuth } from './routes/auth.js';
 import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
 import { handlePiggyBanks } from './routes/piggyBanks.js';
@@ -39,9 +39,9 @@ export default {
             // MODULE ROUTES
             // ==========================================
 
-            // AUTHENTICATION
-            if (path === "/api/v1/auth/anonymous") {
-                return handleAnonymousAuth(request, env);
+            // AUTHENTICATION (Magic Link)
+            if (path.startsWith("/api/v1/auth/")) {
+                return handleAuth(request, env);
             }
 
             // GOALS
@@ -74,8 +74,8 @@ export default {
                 return handleUploadEvidence(request, env);
             }
 
-            // PERFIL DE USUARIO (nombre, email, avatar)
-            if (path === "/api/v1/profile") {
+            // PERFIL DE USUARIO (nombre, email, avatar, password)
+            if (path.startsWith("/api/v1/profile")) {
                 return handleProfile(request, env);
             }
 

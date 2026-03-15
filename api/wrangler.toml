@@ -9,3 +9,7 @@ CORS_ORIGIN = "*"
 binding = "DB"
 database_name = "alcanciapp-d1"
 database_id = "6f897661-718f-4b8a-9a62-c5ba951db869"
+
+[[r2_buckets]]
+binding = "EVIDENCE_BUCKET"
+bucket_name = "alcanciapp-r2"

@@ -31,7 +31,7 @@ export async function authenticateUser(request, env) {
 
     // Buscar sesión válida
     const stmt = env.DB.prepare(
-        "SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > datetime('now')"
+        "SELECT user_id, unlock_until FROM sessions WHERE token_hash = ? AND expires_at > datetime('now')"
     ).bind(tokenHash);
 
     const session = await stmt.first();
@@ -40,6 +40,9 @@ export async function authenticateUser(request, env) {
         return { error: "Invalid or expired session", status: 401 };
     }
 
-    // Devuelve el userId extraído
-    return { userId: session.user_id };
+    // Devuelve el userId y el estado de desbloqueo
+    return {
+        userId: session.user_id,
+        unlockUntil: session.unlock_until
+    };
 }

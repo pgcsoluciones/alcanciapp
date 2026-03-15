@@ -62,20 +62,15 @@ function BadgeItem({ label, icon }) {
 
 // ─── Componente Principal ───────────────────────────────────────────────────
 
-export default function GoalDetail({ goalId, onBack }) {
+export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
     const [goal, setGoal] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [revealRealCurrency, setRevealRealCurrency] = useState(false); // V1 Privacy
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [verifyPassword, setVerifyPassword] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState('');
-    const [now, setNow] = useState(new Date());
-
-    // Timer para el countdown
-    useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 60000);
-        return () => clearInterval(timer);
-    }, []);
 
     const handleAporteSuccess = (newTx) => {
         setTransactions(prev => [newTx, ...prev]);
@@ -108,28 +103,28 @@ export default function GoalDetail({ goalId, onBack }) {
         }
     };
 
-    const handleAporte = async ({ amount }) => {
-        // setIsSubmitting is not defined in the original code, so I'm commenting it out
-        // setIsSubmitting(true); 
-        setError('');
+    // Password validation for Sensitive Unlock
+    const handleVerifyPassword = async () => {
+        setIsVerifying(true);
         try {
             const token = localStorage.getItem('alcanciapp:token');
-            const res = await fetch(`${API_BASE_URL}/api/v1/goals/${goalId}/transactions`, {
+            const res = await fetch(`${API_BASE_URL}/api/v1/profile/verify-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amount })
+                body: JSON.stringify({ password: verifyPassword })
             });
             const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Error al registrar el aporte');
-            const newTx = { ...data.transaction, created_at: new Date().toISOString() };
-            setTransactions(prev => [newTx, ...prev]);
-            // Actualizar total_saved localmente
-            setGoal(prev => ({ ...prev, total_saved: (Number(prev.total_saved) || 0) + Number(amount) }));
-        } catch (err) {
-            setError(err.message);
+            if (data.ok && data.unlock_until) {
+                onUnlock(data.unlock_until);
+                setShowPasswordModal(false);
+            } else {
+                alert(data.error || 'Contraseña incorrecta');
+            }
+        } catch (e) {
+            alert('Error de conexión');
         } finally {
-            // setIsSubmitting is not defined in the original code, so I'm commenting it out
-            // setIsSubmitting(false);
+            setIsVerifying(false);
+            setVerifyPassword('');
         }
     };
 
@@ -157,11 +152,9 @@ export default function GoalDetail({ goalId, onBack }) {
     const motivationalMsg = getMotivationalMessage(goal, currentTransactions);
     const pigCoins = getPigCoins(goal, currentTransactions);
     const pigProg = getPigCoinProgress(goal, currentTransactions);
-    const countdown = getCountdown(goal, currentTransactions, now);
+    const countdown = getCountdownStatus(goal, currentTransactions);
 
-    const freqLabel = (goal.frequency || 'mes').toLowerCase()
-        .replace('mensual', 'mes').replace('semanal', 'semana')
-        .replace('quincenal', 'quincena').replace('diario', 'día');
+    const freqLabel = (goal.frequency || 'Mensual').toLowerCase();
     const IconComponent = iconMap[goal.icon] || Target;
 
     return (
@@ -174,15 +167,22 @@ export default function GoalDetail({ goalId, onBack }) {
                         <button onClick={onBack} style={{ background: 'white', border: 'none', borderRadius: '12px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                             <ArrowLeft size={20} color="#374151" />
                         </button>
-                        <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#111827', margin: '0 0 0 16px' }}>Mi Meta</h1>
+                        <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#111827', margin: '0 0 0 16px' }}>Detalles</h1>
                     </div>
-                    {countdown.totalSeconds > 0 && (
-                        <div style={{ background: '#10B981', color: 'white', padding: '6px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Timer size={14} />
-                            {countdown.days > 0 ? `${countdown.days}d ` : ''}{countdown.hours}h {countdown.minutes}m
-                        </div>
-                    )}
                 </div>
+
+                {/* Countdown / Reloj Contextual Visible */}
+                {countdown.status !== 'idle' && (
+                    <div style={{ background: countdown.status === 'on_track' ? '#ECFDF5' : '#FFFBEB', border: `1px solid ${countdown.status === 'on_track' ? '#D1FAE5' : '#FEF3C7'}`, color: countdown.status === 'on_track' ? '#065F46' : '#92400E', padding: '14px 18px', borderRadius: '18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Clock size={20} color={countdown.status === 'on_track' ? '#10B981' : '#F59E0B'} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>Reloj de Disciplina</div>
+                            <div style={{ fontSize: '14px', fontWeight: '800' }}>{countdown.label}</div>
+                        </div>
+                    </div>
+                )}
 
                 {error && (
                     <div style={{ background: '#FEF2F2', color: '#DC2626', padding: '16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', border: '1px solid #FCA5A5' }}>
@@ -205,8 +205,10 @@ export default function GoalDetail({ goalId, onBack }) {
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#10B981' }}>{fmtPigCoin(pigCoins)}</div>
-                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>PIGCOINS</div>
+                            <div style={{ fontSize: '28px', fontWeight: '900', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {fmtPigCoin(pigCoins).replace(' 🐷', '')} <span style={{ fontSize: '18px' }}>🐷</span>
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total PigCoins</div>
                         </div>
                     </div>
 
@@ -215,27 +217,23 @@ export default function GoalDetail({ goalId, onBack }) {
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px' }}>
                                 <div>
-                                    <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Total Ahorrado</div>
-                                    <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em', filter: revealRealCurrency ? 'none' : 'blur(8px)', transition: 'filter 0.3s' }}>
-                                        {fmtRD(totalSaved)}
+                                    <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Equivalente Real</div>
+                                    <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em', filter: isUnlocked ? 'none' : 'blur(10px)', transition: 'filter 0.4s' }}>
+                                        {isUnlocked ? fmtRD(totalSaved, goal.currency) : '---.---.--'}
                                     </div>
-                                    {!revealRealCurrency && (
+                                    {!isUnlocked && (
                                         <button
-                                            onClick={() => {
-                                                const pin = prompt('Ingresa tu PIN de seguridad (Default: 1234)');
-                                                if (pin === '1234') setRevealRealCurrency(true);
-                                                else alert('PIN Incorrecto');
-                                            }}
-                                            style={{ background: '#F3F4F6', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '6px', color: '#6B7280' }}
+                                            onClick={() => setShowPasswordModal(true)}
+                                            style={{ background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '10px', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}
                                         >
-                                            🔓 VER EQUIVALENTE
+                                            <Lock size={12} /> DESBLOQUEAR MONTOS
                                         </button>
                                     )}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{Math.round(progressPercent)}%</div>
-                                    <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700', filter: revealRealCurrency ? 'none' : 'blur(4px)' }}>
-                                        DE {fmtRD(goal.target_amount)}
+                                    <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>
+                                        COMPLETADO
                                     </div>
                                 </div>
                             </div>
@@ -252,7 +250,7 @@ export default function GoalDetail({ goalId, onBack }) {
                             </div>
                         </>
                     ) : (
-                        <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827' }}>{fmtRD(totalSaved)}</div>
+                        <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827' }}>{isUnlocked ? fmtRD(totalSaved, goal.currency) : fmtPigCoin(pigCoins)}</div>
                     )}
                 </div>
 
@@ -267,7 +265,7 @@ export default function GoalDetail({ goalId, onBack }) {
                     <StatBox
                         label="Racha Activa"
                         value={streak > 0 ? `${streak} 🔥` : '—'}
-                        sub="meses seguidos"
+                        sub="períodos seguidos"
                     />
                 </div>
 
@@ -276,7 +274,7 @@ export default function GoalDetail({ goalId, onBack }) {
                     <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #F3F4F6', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                             <Coins size={18} color="#10B981" />
-                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Desglose de PigCoin</h3>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Acumulación Actual</h3>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -296,14 +294,9 @@ export default function GoalDetail({ goalId, onBack }) {
                             </div>
 
                             <div>
-                                <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>
-                                    Has acumulado <strong style={{ color: '#111827' }}>{fmtPigCoin(pigProg.current)}</strong> en este periodo.
+                                <p style={{ margin: '0', fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>
+                                    Llevas ahorrados <strong style={{ color: '#111827' }}>{fmtPigCoin(pigProg.current)}</strong> de este PigCoin.
                                 </p>
-                                {pigProg.remainingRD > 0 && (
-                                    <div style={{ fontSize: '12px', color: '#10B981', fontWeight: '700' }}>
-                                        + {fmtRD(pigProg.remainingRD)} para 1 PigCoin completo
-                                    </div>
-                                )}
                             </div>
                         </div>
 
@@ -312,10 +305,10 @@ export default function GoalDetail({ goalId, onBack }) {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <TrendingUp size={16} color="#9CA3AF" />
-                                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600' }}>Cuota por {freqLabel}:</span>
+                                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600' }}>Cuota {freqLabel}:</span>
                             </div>
-                            <span style={{ fontSize: '14px', fontWeight: '800', color: '#111827', filter: revealRealCurrency ? 'none' : 'blur(6px)' }}>
-                                {fmtRD(quota)}
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: '#111827' }}>
+                                {isUnlocked ? fmtRD(quota, goal.currency) : `1.00 🐷`}
                             </span>
                         </div>
                     </div>
@@ -326,7 +319,7 @@ export default function GoalDetail({ goalId, onBack }) {
                     <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #F3F4F6', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
                             <Award size={18} color="#F59E0B" />
-                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Insignias Ganadas</h3>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Logros Ganados</h3>
                         </div>
                         <div style={{ display: 'flex', overflowX: 'auto', gap: '16px', paddingBottom: '8px' }}>
                             {achievements.map(a => (
@@ -336,20 +329,35 @@ export default function GoalDetail({ goalId, onBack }) {
                     </div>
                 )}
 
-                {/* ─── CTA de Aporte (Bloqueado si está al 100%) ─── */}
+                {/* ─── CTA de Aporte ─── */}
                 {progressPercent >= 100 ? (
-                    <div style={{ background: '#ECFDF5', border: '2px solid #10B981', borderRadius: '18px', padding: '24px', textAlign: 'center', marginTop: '16px' }}>
-                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🏆</div>
-                        <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '900', color: '#065F46' }}>¡Meta Cumplida!</h3>
-                        <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#059669', fontWeight: '600' }}>
-                            Has alcanzado tu objetivo. Tu disciplina es ejemplar.
-                        </p>
-                        <button
-                            onClick={onBack}
-                            style={{ width: '100%', background: '#10B981', color: 'white', border: 'none', borderRadius: '14px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}
-                        >
-                            Crear Nueva Meta
-                        </button>
+                    <div style={{
+                        background: 'linear-gradient(145deg, #ECFDF5 0%, #D1FAE5 100%)',
+                        border: '2px solid #10B981',
+                        borderRadius: '28px',
+                        padding: '32px 24px',
+                        textAlign: 'center',
+                        marginTop: '20px',
+                        boxShadow: '0 12px 30px rgba(16,185,129,0.15)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'bounce 2s infinite' }}>🏆</div>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '900', color: '#065F46', letterSpacing: '-0.03em' }}>¡Lo Lograste!</h3>
+                            <p style={{ margin: '0 0 24px 0', fontSize: '15px', color: '#059669', fontWeight: '700', lineHeight: '1.5' }}>
+                                Has completado tu meta con éxito. Tu disciplina es de otro planeta.
+                            </p>
+                            <button
+                                onClick={onBack}
+                                style={{ background: '#10B981', color: 'white', border: 'none', borderRadius: '16px', padding: '14px 28px', fontSize: '15px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.2)' }}
+                            >
+                                Volver al Panel
+                            </button>
+                        </div>
+                        {/* Círculos decorativos de fondo */}
+                        <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: '#10B981', opacity: 0.1, borderRadius: '50%' }} />
+                        <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '120px', height: '120px', background: '#10B981', opacity: 0.05, borderRadius: '50%' }} />
                     </div>
                 ) : (
                     <button
@@ -362,27 +370,12 @@ export default function GoalDetail({ goalId, onBack }) {
                     </button>
                 )}
 
-                {/* ─── Futuras funciones (Placeholders honestos) ─── */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px' }}>
-                    {[
-                        { Icon: BarChart2, label: 'Estadísticas' },
-                        { Icon: Bell, label: 'Avisos' },
-                        { Icon: Users, label: 'Círculos' },
-                        { Icon: Share2, label: 'Compartir' },
-                    ].map(({ Icon, label }) => (
-                        <button key={label} title="Próximamente" style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', padding: '14px 4px', borderRadius: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'not-allowed', color: '#D1D5DB' }}>
-                            <Icon size={20} style={{ marginBottom: '6px' }} />
-                            <span style={{ fontSize: '10px', fontWeight: '600' }}>{label}</span>
-                        </button>
-                    ))}
-                </div>
-
                 {/* ─── Historial ─── */}
                 <div style={{ marginTop: '32px' }}>
                     <h3 style={{ fontSize: '18px', color: '#111827', marginBottom: '16px', fontWeight: '900' }}>Historial del Plan</h3>
                     {transactions.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '32px 20px', background: 'white', borderRadius: '20px', color: '#9CA3AF', border: '2px dashed #F3F4F6', fontSize: '14px', fontWeight: '600' }}>
-                            Tu alcancía está vacía. ¡Haz tu primer aporte!
+                            Inicia tu historial hoy mismo.
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -403,8 +396,12 @@ export default function GoalDetail({ goalId, onBack }) {
                                             </div>
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontWeight: '900', color: '#10B981', fontSize: '17px' }}>+{fmtRD(tx.amount)}</div>
-                                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>+{fmtPigCoin(tx.amount / quota)}</div>
+                                            <div style={{ fontWeight: '900', color: '#10B981', fontSize: '17px' }}>
+                                                {isUnlocked ? fmtRD(tx.amount, goal.currency) : fmtPigCoin(tx.amount / quota)}
+                                            </div>
+                                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>
+                                                {isUnlocked ? fmtPigCoin(tx.amount / quota) : 'PIGCOIN'}
+                                            </div>
                                         </div>
                                     </div>
                                     {tx.note && (
@@ -422,11 +419,46 @@ export default function GoalDetail({ goalId, onBack }) {
             {/* Modal de Aporte */}
             {showModal && (
                 <AporteModal
-                    goalId={goalId}
-                    suggestedQuota={quota}
+                    goal={goal}
                     onClose={() => setShowModal(false)}
                     onSuccess={handleAporteSuccess}
                 />
+            )}
+
+            {/* Modal de Password Desbloqueo */}
+            {showPasswordModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: 'white', width: '100%', maxWidth: '340px', borderRadius: '28px', padding: '28px', boxSizing: 'border-box' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                            <div style={{ width: '56px', height: '56px', background: '#ECFDF5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <Lock size={26} color="#10B981" />
+                            </div>
+                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: '#111827' }}>Validación Real</h3>
+                            <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '8px', fontWeight: '600', lineHeight: '1.4' }}>Ingresa tu contraseña para ver montos financieros reales.</p>
+                        </div>
+                        <input
+                            type="password"
+                            placeholder="Tu contraseña"
+                            value={verifyPassword}
+                            onChange={(e) => setVerifyPassword(e.target.value)}
+                            style={{ width: '100%', padding: '16px', borderRadius: '16px', border: '1.5px solid #E5E7EB', outline: 'none', fontSize: '16px', marginBottom: '16px', boxSizing: 'border-box', textAlign: 'center', background: '#F9FAFB' }}
+                            autoFocus
+                        />
+                        <button
+                            onClick={handleVerifyPassword}
+                            disabled={isVerifying || !verifyPassword}
+                            style={{ width: '100%', background: '#111827', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '900', cursor: 'pointer' }}
+                        >
+                            {isVerifying ? 'Cargando...' : 'Confirmar'}
+                        </button>
+                        <button
+                            onClick={() => { setShowPasswordModal(false); setVerifyPassword(''); }}
+                            style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', fontWeight: '700', padding: '12px', marginTop: '8px', cursor: 'pointer' }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

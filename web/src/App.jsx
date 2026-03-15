@@ -24,36 +24,31 @@ function App() {
     // Vista actual
     const [currentView, setCurrentView] = useState(!token ? 'login' : 'dashboard')
 
+    // Privacidad (Modo Real) - 5 minutos
+    const [isUnlocked, setIsUnlocked] = useState(false)
+    const [unlockUntil, setUnlockUntil] = useState(null)
+
     // Estado de la meta guardada (leída de localStorage)
     const [savedGoal, setSavedGoal] = useState(null)
 
-    // Cargar meta de localStorage al iniciar
+    // Timer para reset de privacidad
     useEffect(() => {
-        const storedGoal = localStorage.getItem('alcanciapp:goal')
-        if (storedGoal) {
-            try {
-                setSavedGoal(JSON.parse(storedGoal))
-            } catch (e) {
-                console.error('Error parseando meta guardada:', e)
-            }
-        }
-    }, [])
+        if (!isUnlocked || !unlockUntil) return
 
-    useEffect(() => {
-        fetch(`${API_BASE_URL}/health`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.ok) {
-                    setApiStatus('API conectada correctamente')
-                } else {
-                    setApiStatus('Error conectando con API')
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching API:', error)
-                setApiStatus('Error conectando con API')
-            })
-    }, [])
+        const interval = setInterval(() => {
+            if (new Date() >= new Date(unlockUntil)) {
+                setIsUnlocked(false)
+                setUnlockUntil(null)
+            }
+        }, 1000);
+
+        return () => clearInterval(interval)
+    }, [isUnlocked, unlockUntil])
+
+    const handleUnlock = (until) => {
+        setUnlockUntil(until)
+        setIsUnlocked(true)
+    }
 
     const handleLoginSuccess = (newToken, newUser) => {
         localStorage.setItem('alcanciapp:token', newToken)
@@ -105,6 +100,8 @@ function App() {
             ) : currentView === 'dashboard' ? (
                 <Dashboard
                     user={user}
+                    isUnlocked={isUnlocked}
+                    onUnlock={handleUnlock}
                     onOpenMenu={() => setIsSidebarOpen(true)}
                     onLogout={handleLogout}
                     onGoToCreate={() => handleNavigate('selectGoal')}
@@ -122,6 +119,8 @@ function App() {
             ) : currentView.startsWith('detail:') ? (
                 <GoalDetail
                     goalId={currentView.split(':')[1]}
+                    isUnlocked={isUnlocked}
+                    onUnlock={handleUnlock}
                     onBack={() => handleNavigate('dashboard')}
                 />
             ) : currentView === 'profile' ? (

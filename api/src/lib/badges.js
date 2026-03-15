@@ -42,12 +42,51 @@ export async function evaluateBadges(db, userId, goalId, txAmount, env) {
     if (percent >= 75) badgesToGrant.push({ code: 'hitos_75', goal_id: goalId });
     if (percent >= 100) badgesToGrant.push({ code: 'goal_completed', goal_id: goalId });
 
-    // --- D. Lógica de Constancia y Puntualidad (Suscinta para V1) ---
-    // Nota: Para V1 Real, simplificamos: si tiene X aportes, se asume constancia si no hay lógica de periodos compleja aún
+    // --- D. Lógica de Rachas y Puntualidad Real ---
+    const freq = (goal.frequency || 'Mensual').toLowerCase();
+    let daysPerPeriod = 30.42;
+    if (freq.includes('quincenal')) daysPerPeriod = 15;
+    if (freq.includes('semanal')) daysPerPeriod = 7;
+    if (freq.includes('diario')) daysPerPeriod = 1;
+
+    // Calcular atrasos: Un aporte es puntual si se hace dentro del periodo esperado.
+    // Para simplificar V1 Real: analizamos los últimos N aportes y vemos la distancia entre ellos.
+    const sortedTxs = [...transactions.results].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    let punctualStreak = 0;
+    let maxPunctualStreak = 0;
+    let wasBehindAtSomePoint = false;
+
+    // Evaluar puntualidad básica: si la distancia entre aportes es <= daysPerPeriod + 2 días de gracia
+    for (let i = 0; i < sortedTxs.length; i++) {
+        const currentTxDate = new Date(sortedTxs[i].created_at);
+        const prevTxDate = i > 0 ? new Date(sortedTxs[i - 1].created_at) : new Date(goal.created_at);
+
+        const diffDays = (currentTxDate - prevTxDate) / (1000 * 3600 * 24);
+
+        if (diffDays <= daysPerPeriod + 2) {
+            punctualStreak++;
+        } else {
+            wasBehindAtSomePoint = true;
+            punctualStreak = 1; // Resetea racha pero el aporte actual cuenta como el inicio de una nueva
+        }
+        maxPunctualStreak = Math.max(maxPunctualStreak, punctualStreak);
+    }
+
+    if (maxPunctualStreak >= 5) badgesToGrant.push({ code: 'punctual_5', goal_id: goalId });
+    if (maxPunctualStreak >= 10) badgesToGrant.push({ code: 'racha_10', goal_id: goalId });
+
+    // --- E. Recuperación (Fénix) ---
+    // Si estuvo atrasado alguna vez y hoy su ritmo es 'on_track' o 'ahead'
+    const periodsElapsed = Math.floor((new Date() - new Date(goal.created_at)) / (daysPerPeriod * 24 * 3600 * 1000));
+    const currentPigCoins = totalSaved / (targetAmount / (periodsElapsed || 1)); // Estimación rápida
+    if (wasBehindAtSomePoint && (totalSaved / (targetAmount / (goal.duration_months || 1)) >= periodsElapsed)) {
+        badgesToGrant.push({ code: 'recovery', goal_id: goalId });
+    }
+
+    // --- F. Constancia (3 y 7 aportes) ---
     if (txCount >= 3) badgesToGrant.push({ code: 'constancy_3', goal_id: goalId });
     if (txCount >= 7) badgesToGrant.push({ code: 'constancy_7', goal_id: goalId });
-    if (txCount >= 5) badgesToGrant.push({ code: 'punctual_5', goal_id: goalId });
-    if (txCount >= 10) badgesToGrant.push({ code: 'racha_10', goal_id: goalId });
 
     // 2. Insertar insignias (ignorando duplicados por el UNIQUE en la DB)
     for (const badge of badgesToGrant) {
