@@ -60,6 +60,15 @@ export async function handleTransactions(request, env) {
             return new Response(JSON.stringify({ ok: true, transactions: results }), { status: 200, headers: baseHeaders });
         }
 
+        // [GET] /api/v1/transactions
+        if (method === 'GET' && pathSegments[2] === 'transactions' && pathSegments.length === 3) {
+            const { results } = await env.DB.prepare(
+                "SELECT * FROM goal_transactions WHERE user_id = ? ORDER BY created_at DESC"
+            ).bind(userId).all();
+
+            return new Response(JSON.stringify({ ok: true, transactions: results }), { status: 200, headers: baseHeaders });
+        }
+
         // [DELETE] /api/v1/transactions/:id
         if (method === 'DELETE' && pathSegments[2] === 'transactions' && pathSegments.length === 4) {
             const txId = pathSegments[3];
