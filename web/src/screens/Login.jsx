@@ -9,6 +9,7 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
     const [step, setStep] = useState('email'); // 'email' o 'token'
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [debugTokenHint, setDebugTokenHint] = useState('');
 
     const handleRequestToken = async (e) => {
         e.preventDefault();
@@ -29,6 +30,11 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
             const data = await response.json();
             if (!response.ok || !data.ok) throw new Error(data.error || 'Error al solicitar token.');
 
+            // TEMP QA/Testing: si el backend devuelve debug_token/debug_code,
+            // lo mostramos y autocompletamos para pruebas internas.
+            const qaDebugToken = data?.debug_token || data?.debug_code || '';
+            setDebugTokenHint(qaDebugToken ? String(qaDebugToken) : '');
+            setToken(qaDebugToken ? String(qaDebugToken) : '');
             setStep('token');
         } catch (err) {
             setError(err.message);
@@ -72,7 +78,14 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
                 error={error}
                 footerText={step === 'email' ? "¿No tienes una cuenta?" : "¿No recibiste el código?"}
                 footerActionText={step === 'email' ? "Regístrate aquí" : "Intentar de nuevo"}
-                onFooterAction={step === 'email' ? onGoToRegister : () => setStep('email')}
+                onFooterAction={step === 'email'
+                    ? onGoToRegister
+                    : () => {
+                        setStep('email');
+                        setToken('');
+                        setDebugTokenHint('');
+                    }
+                }
             >
                 {step === 'email' ? (
                     <AuthInput
@@ -84,14 +97,31 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
                         icon={Mail}
                     />
                 ) : (
-                    <AuthInput
-                        label="Código de 6 dígitos"
-                        type="number"
-                        placeholder="123456"
-                        value={token}
-                        onChange={(e) => setToken(e.target.value)}
-                        icon={Key}
-                    />
+                    <>
+                        <AuthInput
+                            label="Código de 6 dígitos"
+                            type="number"
+                            placeholder="123456"
+                            value={token}
+                            onChange={(e) => setToken(e.target.value)}
+                            icon={Key}
+                        />
+                        {debugTokenHint && (
+                            <div style={{
+                                marginTop: '12px',
+                                fontSize: '12px',
+                                color: '#065F46',
+                                background: '#ECFDF5',
+                                border: '1px solid #A7F3D0',
+                                borderRadius: '10px',
+                                padding: '10px 12px',
+                                textAlign: 'center',
+                                fontWeight: '600'
+                            }}>
+                                Código temporal de prueba: <strong>{debugTokenHint}</strong>
+                            </div>
+                        )}
+                    </>
                 )}
 
                 <AuthButton isLoading={isLoading}>
