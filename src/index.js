@@ -1,7 +1,13 @@
 import { handleOptions, getCorsHeaders } from './lib/cors.js';
-import { handleAnonymousAuth } from './routes/auth.js';
+import { handleAnonymousAuth, handleRequestToken, handleVerifyToken } from './routes/auth.js';
 import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
+import { handleProfile } from './routes/profile.js';
+
+function normalizePathname(pathname) {
+    const collapsed = pathname.replace(/\/+/g, '/');
+    return collapsed.length > 1 ? collapsed.replace(/\/+$/, '') : collapsed;
+}
 
 export default {
     async fetch(request, env, ctx) {
@@ -11,6 +17,7 @@ export default {
 
         const url = new URL(request.url);
         const path = url.pathname;
+        const normalizedPath = normalizePathname(path);
         const method = request.method;
 
         const baseHeaders = { ...getCorsHeaders(request, env), "Content-Type": "application/json" };
@@ -19,13 +26,13 @@ export default {
             // ==========================================
             // BACKWARD COMPATIBILITY
             // ==========================================
-            if (path === "/" && method === "GET") {
+            if (normalizedPath === "/" && method === "GET") {
                 return new Response("AlcanciApp API is running", {
                     headers: { ...getCorsHeaders(request, env), "Content-Type": "text/plain" }
                 });
             }
 
-            if (path === "/health" && method === "GET") {
+            if (normalizedPath === "/health" && method === "GET") {
                 return new Response(JSON.stringify({ ok: true, name: "alcanciapp-api" }), {
                     headers: baseHeaders
                 });
@@ -36,23 +43,35 @@ export default {
             // ==========================================
 
             // AUTHENTICATION
-            if (path === "/api/v1/auth/anonymous") {
+            if (normalizedPath === "/api/v1/auth/anonymous") {
                 return handleAnonymousAuth(request, env);
             }
 
+            if (normalizedPath === "/api/v1/auth/request-token") {
+                return handleRequestToken(request, env);
+            }
+
+            if (normalizedPath === "/api/v1/auth/verify-token") {
+                return handleVerifyToken(request, env);
+            }
+
             // GOALS
-            if (path.startsWith("/api/v1/goals")) {
+            if (normalizedPath.startsWith("/api/v1/goals")) {
                 // Delegamos /api/v1/goals... a su handler
                 // Transacciones atadas a goals: POST /api/v1/goals/:id/transactions
-                if (path.includes("/transactions")) {
+                if (normalizedPath.includes("/transactions")) {
                     return handleTransactions(request, env);
                 }
                 return handleGoals(request, env);
             }
 
+            // PROFILE
+            if (normalizedPath === "/api/v1/profile" || normalizedPath === "/api/v1/profile/verify-password") {
+                return handleProfile(request, env);
+            }
+
             // TRANSACTIONS DIRETS
-            if (path.startsWith("/api/v1/transactions")) {
-                // Sólo soportamos DELETE /api/v1/transactions/:id
+            if (normalizedPath === "/api/v1/transactions" || normalizedPath.startsWith("/api/v1/transactions/")) {
                 return handleTransactions(request, env);
             }
 

@@ -41,5 +41,5 @@ export async function authenticateUser(request, env) {
     }
 
     // Devuelve el userId extraído
-    return { userId: session.user_id };
+    return { userId: session.user_id, tokenHash };
 }
