@@ -15,29 +15,41 @@ export async function handleAuth(request, env) {
 
     try {
         // ── [POST] /api/v1/auth/request-token ─────────────────────────────
-        // Sirve para LOGIN y para RE-AUTH (unlock)
         if (path === '/api/v1/auth/request-token') {
-            const { email, type } = await request.json(); // type: 'login' | 'unlock'
+            const { email, type } = await request.json();
             if (!email || !email.includes('@')) {
                 return new Response(JSON.stringify({ ok: false, error: "Email inválido" }), { status: 400, headers: baseHeaders });
             }
 
-            // 1. Generar token de 6 dígitos
+            const normalizedEmail = email.toLowerCase();
+
+            // Validar que el usuario ya existe (impedir auto-registro)
+            const existingUser = await env.DB.prepare(
+                "SELECT id FROM users WHERE email = ?"
+            ).bind(normalizedEmail).first();
+
+            if (!existingUser) {
+                return new Response(JSON.stringify({ ok: false, error: "Usuario no autorizado" }), { status: 403, headers: baseHeaders });
+            }
+
+            // Generar token de 6 dígitos
             const rawToken = Math.floor(100000 + Math.random() * 900000).toString();
             const pepper = env.AUTH_PEPPER || "local_pepper_placeholder";
             const tokenHash = await sha256(rawToken + pepper);
+            const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-            const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
+            // Eliminar token previo para evitar conflictos D1
+            await env.DB.prepare(
+                "DELETE FROM auth_tokens WHERE email = ?"
+            ).bind(normalizedEmail).run();
 
-            // 2. Guardar en DB (usamos una columna 'type' si queremos diferenciar, pero para V1 un token es un token)
+            // INSERT limpio, sin ON CONFLICT
             const tokenId = crypto.randomUUID();
             await env.DB.prepare(
-                "INSERT INTO auth_tokens (id, email, token_hash, expires_at) VALUES (?, ?, ?, ?) " +
-                "ON CONFLICT(email) DO UPDATE SET token_hash=excluded.token_hash, expires_at=excluded.expires_at"
-            ).bind(tokenId, email.toLowerCase(), tokenHash, expiresAt).run();
+                "INSERT INTO auth_tokens (id, email, token_hash, expires_at) VALUES (?, ?, ?, ?)"
+            ).bind(tokenId, normalizedEmail, tokenHash, expiresAt).run();
 
-            // 3. Simular envío de email (log en consola)
-            console.log(`[MAGIC CODE] Código para ${email} (${type || 'access'}): ${rawToken}`);
+            console.log(`[MAGIC CODE] Código para ${normalizedEmail} (${type || 'access'}): ${rawToken}`);
 
             return new Response(JSON.stringify({
                 ok: true,
@@ -47,7 +59,6 @@ export async function handleAuth(request, env) {
         }
 
         // ── [POST] /api/v1/auth/verify-token ──────────────────────────────
-        // Verifica el código y crea sesión (o desbloquea sesión si es re-auth)
         if (path === '/api/v1/auth/verify-token') {
             const { email, token, isUnlock } = await request.json();
             if (!email || !token) {
@@ -66,7 +77,7 @@ export async function handleAuth(request, env) {
                 return new Response(JSON.stringify({ ok: false, error: "Código inválido o expirado" }), { status: 401, headers: baseHeaders });
             }
 
-            // 2. Si solo es UNLOCK, actualizamos la sesión actual
+            // 2. Si solo es UNLOCK, actualizar sesión actual
             if (isUnlock) {
                 const authHeader = request.headers.get("Authorization");
                 if (!authHeader) {
@@ -80,22 +91,22 @@ export async function handleAuth(request, env) {
                     "UPDATE sessions SET unlock_until = ? WHERE token_hash = ?"
                 ).bind(unlockUntil, sessionHash).run();
 
-                // Limpiar token usado
                 await env.DB.prepare("DELETE FROM auth_tokens WHERE email = ?").bind(email.toLowerCase()).run();
 
                 return new Response(JSON.stringify({ ok: true, unlock_until: unlockUntil }), { status: 200, headers: baseHeaders });
             }
 
-            // 3. Login/Registro: Buscar o crear usuario
-            let user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email.toLowerCase()).first();
-            let userId = user?.id;
+            // 3. Validar que el usuario existe (no se permite auto-registro)
+            const normalizedEmail = email.toLowerCase();
+            const user = await env.DB.prepare(
+                "SELECT * FROM users WHERE email = ?"
+            ).bind(normalizedEmail).first();
 
             if (!user) {
-                userId = crypto.randomUUID();
-                await env.DB.prepare("INSERT INTO users (id, email) VALUES (?, ?)")
-                    .bind(userId, email.toLowerCase()).run();
-                user = { id: userId, email: email.toLowerCase() };
+                return new Response(JSON.stringify({ ok: false, error: "Usuario no autorizado" }), { status: 403, headers: baseHeaders });
             }
+
+            const userId = user.id;
 
             // 4. Crear sesión
             const sessionId = crypto.randomUUID();
@@ -108,14 +119,14 @@ export async function handleAuth(request, env) {
             ).bind(sessionId, userId, sessionHash, sessionExpires).run();
 
             // 5. Limpiar token usado
-            await env.DB.prepare("DELETE FROM auth_tokens WHERE email = ?").bind(email.toLowerCase()).run();
+            await env.DB.prepare("DELETE FROM auth_tokens WHERE email = ?").bind(normalizedEmail).run();
 
             return new Response(JSON.stringify({
                 ok: true,
                 token: rawSessionToken,
                 user: {
                     id: userId,
-                    email: email.toLowerCase(),
+                    email: normalizedEmail,
                     name: user.name || email.split('@')[0],
                     avatar: user.avatar
                 }
