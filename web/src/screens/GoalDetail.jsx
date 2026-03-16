@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, TrendingUp, BarChart2, Bell, Share2, Users, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Zap, Award, Timer, Coins, Clock, Lock } from 'lucide-react';
 import AporteModal from '../components/AporteModal';
+import SensitiveUnlockModal from '../components/SensitiveUnlockModal';
 import { API_BASE_URL } from '../lib/config';
 import { ASSET } from '../lib/assets';
 import {
@@ -28,8 +29,6 @@ const iconMap = {
     'emergency': HeartPulse,
     'business': Briefcase,
 };
-
-// ─── Subcomponentes ─────────────────────────────────────────────────────────
 
 function StatBox({ label, value, sub, color = '#111827' }) {
     return (
@@ -60,17 +59,18 @@ function BadgeItem({ label, icon }) {
     );
 }
 
-// ─── Componente Principal ───────────────────────────────────────────────────
-
 export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
     const [goal, setGoal] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [verifyPassword, setVerifyPassword] = useState('');
-    const [isVerifying, setIsVerifying] = useState(false);
+    const [showUnlockModal, setShowUnlockModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteNameInput, setDeleteNameInput] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isArchiving, setIsArchiving] = useState(false);
     const [error, setError] = useState('');
+    const userEmail = JSON.parse(localStorage.getItem('alcanciapp:user') || 'null')?.email;
 
     const handleAporteSuccess = (newTx) => {
         setTransactions(prev => [newTx, ...prev]);
@@ -103,28 +103,47 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
         }
     };
 
-    // Password validation for Sensitive Unlock
-    const handleVerifyPassword = async () => {
-        setIsVerifying(true);
+    const handleDeleteGoal = async () => {
+        if (!goal || deleteNameInput !== goal.name) return;
+
+        setIsDeleting(true);
+        setError('');
         try {
             const token = localStorage.getItem('alcanciapp:token');
-            const res = await fetch(`${API_BASE_URL}/api/v1/profile/verify-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ password: verifyPassword })
+            const res = await fetch(`${API_BASE_URL}/api/v1/goals/${goal.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-            const data = await res.json();
-            if (data.ok && data.unlock_until) {
-                onUnlock(data.unlock_until);
-                setShowPasswordModal(false);
-            } else {
-                alert(data.error || 'Contraseña incorrecta');
-            }
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) throw new Error(data.error || 'No se pudo eliminar la meta');
+
+            onBack();
         } catch (e) {
-            alert('Error de conexión');
+            setError(e.message);
         } finally {
-            setIsVerifying(false);
-            setVerifyPassword('');
+            setIsDeleting(false);
+        }
+    };
+
+    const handleArchiveGoal = async () => {
+        if (!goal) return;
+
+        setIsArchiving(true);
+        setError('');
+        try {
+            const token = localStorage.getItem('alcanciapp:token');
+            const res = await fetch(`${API_BASE_URL}/api/v1/goals/${goal.id}/archive`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) throw new Error(data.error || 'No se pudo archivar la meta');
+
+            onBack();
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setIsArchiving(false);
         }
     };
 
@@ -140,7 +159,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
         );
     }
 
-    // ─── Cálculos ──────────────────────────────────────────────────────────
     const hasTarget = typeof goal.target_amount === 'number' && goal.target_amount > 0;
     const currentTransactions = transactions || [];
     const totalSaved = Number(goal.total_saved || 0);
@@ -160,8 +178,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px', boxSizing: 'border-box' }}>
             <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-
-                {/* Header Dinámico */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                         <button onClick={onBack} style={{ background: 'white', border: 'none', borderRadius: '12px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
@@ -171,7 +187,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                     </div>
                 </div>
 
-                {/* Countdown / Reloj Contextual Visible */}
                 {countdown.status !== 'idle' && (
                     <div style={{ background: countdown.status === 'on_track' ? '#ECFDF5' : '#FFFBEB', border: `1px solid ${countdown.status === 'on_track' ? '#D1FAE5' : '#FEF3C7'}`, color: countdown.status === 'on_track' ? '#065F46' : '#92400E', padding: '14px 18px', borderRadius: '18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '40px', height: '40px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -190,7 +205,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                     </div>
                 )}
 
-                {/* ─── Hero Card PigCoin ─── */}
                 <div style={{ background: 'linear-gradient(135deg, #ffffff 0%, #F0FDF4 100%)', border: '1px solid #E5E7EB', borderRadius: '24px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', marginBottom: '16px', position: 'relative' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -212,7 +226,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                         </div>
                     </div>
 
-                    {/* Progreso Visual */}
                     {hasTarget ? (
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px' }}>
@@ -223,7 +236,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                                     </div>
                                     {!isUnlocked && (
                                         <button
-                                            onClick={() => setShowPasswordModal(true)}
+                                            onClick={() => setShowUnlockModal(true)}
                                             style={{ background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '10px', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}
                                         >
                                             <Lock size={12} /> DESBLOQUEAR MONTOS
@@ -241,7 +254,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                                 <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #059669, #10B981)', borderRadius: '6px', transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }} />
                             </div>
 
-                            {/* Mensaje motivacional contextual */}
                             <div style={{ background: 'white', borderRadius: '16px', padding: '14px', border: '1px solid #DCFCE7', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ fontSize: '24px' }}>🐷</div>
                                 <p style={{ margin: 0, fontSize: '13px', color: '#065F46', fontWeight: '600', lineHeight: '1.4' }}>
@@ -254,7 +266,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                     )}
                 </div>
 
-                {/* ─── Métricas de Gamificación ─── */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                     <StatBox
                         label="Ritmo Actual"
@@ -269,7 +280,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                     />
                 </div>
 
-                {/* ─── Detalle de PigCoin ─── */}
                 {hasTarget && (
                     <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #F3F4F6', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -278,7 +288,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                            {/* Círculo de progreso fraccionado */}
                             <div style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
                                 <svg width="80" height="80" viewBox="0 0 80 80">
                                     <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" strokeWidth="6" />
@@ -314,7 +323,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                     </div>
                 )}
 
-                {/* ─── Insignias ─── */}
                 {achievements.length > 0 && (
                     <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #F3F4F6', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
@@ -329,7 +337,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                     </div>
                 )}
 
-                {/* ─── CTA de Aporte ─── */}
                 {progressPercent >= 100 ? (
                     <div style={{
                         background: 'linear-gradient(145deg, #ECFDF5 0%, #D1FAE5 100%)',
@@ -343,7 +350,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                         overflow: 'hidden'
                     }}>
                         <div style={{ position: 'relative', zIndex: 1 }}>
-                            <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'bounce 2s infinite' }}>🏆</div>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏆</div>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '900', color: '#065F46', letterSpacing: '-0.03em' }}>¡Lo Lograste!</h3>
                             <p style={{ margin: '0 0 24px 0', fontSize: '15px', color: '#059669', fontWeight: '700', lineHeight: '1.5' }}>
                                 Has completado tu meta con éxito. Tu disciplina es de otro planeta.
@@ -355,7 +362,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                                 Volver al Panel
                             </button>
                         </div>
-                        {/* Círculos decorativos de fondo */}
                         <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: '#10B981', opacity: 0.1, borderRadius: '50%' }} />
                         <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '120px', height: '120px', background: '#10B981', opacity: 0.05, borderRadius: '50%' }} />
                     </div>
@@ -363,14 +369,29 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                     <button
                         onClick={() => setShowModal(true)}
                         style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '18px', padding: '20px', fontSize: '17px', fontWeight: '900', cursor: 'pointer', marginTop: '16px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', transition: 'all 0.2s ease' }}
-                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
-                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
                         💰 Hacer Aporte
                     </button>
                 )}
 
-                {/* ─── Historial ─── */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                    {progressPercent >= 100 && (
+                        <button
+                            onClick={handleArchiveGoal}
+                            disabled={isArchiving}
+                            style={{ flex: 1, background: isArchiving ? '#D1D5DB' : '#111827', color: 'white', border: 'none', borderRadius: '14px', padding: '14px', fontWeight: '800', cursor: isArchiving ? 'not-allowed' : 'pointer' }}
+                        >
+                            {isArchiving ? 'Archivando...' : 'Archivar meta'}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setShowDeleteModal(true)}
+                        style={{ flex: 1, background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FCA5A5', borderRadius: '14px', padding: '14px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                        Eliminar meta
+                    </button>
+                </div>
+
                 <div style={{ marginTop: '32px' }}>
                     <h3 style={{ fontSize: '18px', color: '#111827', marginBottom: '16px', fontWeight: '900' }}>Historial del Plan</h3>
                     {transactions.length === 0 ? (
@@ -416,7 +437,6 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                 </div>
             </div>
 
-            {/* Modal de Aporte */}
             {showModal && (
                 <AporteModal
                     goal={goal}
@@ -425,35 +445,37 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                 />
             )}
 
-            {/* Modal de Password Desbloqueo */}
-            {showPasswordModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                    <div style={{ background: 'white', width: '100%', maxWidth: '340px', borderRadius: '28px', padding: '28px', boxSizing: 'border-box' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                            <div style={{ width: '56px', height: '56px', background: '#ECFDF5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                                <Lock size={26} color="#10B981" />
-                            </div>
-                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: '#111827' }}>Validación Real</h3>
-                            <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '8px', fontWeight: '600', lineHeight: '1.4' }}>Ingresa tu contraseña para ver montos financieros reales.</p>
-                        </div>
+            <SensitiveUnlockModal
+                isOpen={showUnlockModal}
+                userEmail={userEmail}
+                onClose={() => setShowUnlockModal(false)}
+                onUnlock={onUnlock}
+            />
+
+            {showDeleteModal && goal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: 'white', width: '100%', maxWidth: '360px', borderRadius: '24px', padding: '24px', boxSizing: 'border-box' }}>
+                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#111827' }}>Eliminar meta</h3>
+                        <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '10px', lineHeight: '1.4' }}>
+                            Escribe exactamente <strong>{goal.name}</strong> para confirmar.
+                        </p>
                         <input
-                            type="password"
-                            placeholder="Tu contraseña"
-                            value={verifyPassword}
-                            onChange={(e) => setVerifyPassword(e.target.value)}
-                            style={{ width: '100%', padding: '16px', borderRadius: '16px', border: '1.5px solid #E5E7EB', outline: 'none', fontSize: '16px', marginBottom: '16px', boxSizing: 'border-box', textAlign: 'center', background: '#F9FAFB' }}
+                            type='text'
+                            value={deleteNameInput}
+                            onChange={(e) => setDeleteNameInput(e.target.value)}
+                            style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #E5E7EB', boxSizing: 'border-box', marginTop: '8px', marginBottom: '12px' }}
                             autoFocus
                         />
                         <button
-                            onClick={handleVerifyPassword}
-                            disabled={isVerifying || !verifyPassword}
-                            style={{ width: '100%', background: '#111827', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '900', cursor: 'pointer' }}
+                            onClick={handleDeleteGoal}
+                            disabled={isDeleting || deleteNameInput !== goal.name}
+                            style={{ width: '100%', background: (isDeleting || deleteNameInput !== goal.name) ? '#D1D5DB' : '#DC2626', color: 'white', border: 'none', borderRadius: '14px', padding: '14px', fontWeight: '800', cursor: (isDeleting || deleteNameInput !== goal.name) ? 'not-allowed' : 'pointer' }}
                         >
-                            {isVerifying ? 'Cargando...' : 'Confirmar'}
+                            {isDeleting ? 'Eliminando...' : 'Eliminar definitivamente'}
                         </button>
                         <button
-                            onClick={() => { setShowPasswordModal(false); setVerifyPassword(''); }}
-                            style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', fontWeight: '700', padding: '12px', marginTop: '8px', cursor: 'pointer' }}
+                            onClick={() => { setShowDeleteModal(false); setDeleteNameInput(''); }}
+                            style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', padding: '10px', marginTop: '8px', fontWeight: '700', cursor: 'pointer' }}
                         >
                             Cancelar
                         </button>
@@ -463,5 +485,3 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
         </div>
     );
 }
-
-
