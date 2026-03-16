@@ -7,6 +7,7 @@ export default function SensitiveUnlockModal({ isOpen, userEmail, onClose, onUnl
     const [verifyCode, setVerifyCode] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState('');
+    const [debugCodeHint, setDebugCodeHint] = useState('');
 
     if (!isOpen) return null;
 
@@ -14,6 +15,7 @@ export default function SensitiveUnlockModal({ isOpen, userEmail, onClose, onUnl
         setVerifyingStep('request');
         setVerifyCode('');
         setVerifyError('');
+        setDebugCodeHint('');
         setIsVerifying(false);
         onClose();
     };
@@ -34,6 +36,19 @@ export default function SensitiveUnlockModal({ isOpen, userEmail, onClose, onUnl
             });
             const data = await res.json();
             if (!res.ok || !data.ok) throw new Error(data.error || 'Error al enviar código');
+
+            // TEMP QA/Testing: en modo debug, el backend puede devolver el código
+            // para evitar depender de consola/correo durante pruebas internas.
+            // Eliminar este flujo cuando se implemente el envío real definitivo.
+            const qaDebugCode = data?.debug_code || data?.debug_token;
+            if (qaDebugCode) {
+                const code = String(qaDebugCode);
+                setVerifyCode(code);
+                setDebugCodeHint(code);
+                setVerifyingStep('verify');
+                return;
+            }
+
             setVerifyingStep('verify');
         } catch (err) {
             setVerifyError(err.message);
@@ -106,6 +121,11 @@ export default function SensitiveUnlockModal({ isOpen, userEmail, onClose, onUnl
                             style={{ width: '100%', padding: '16px', borderRadius: '14px', border: '1px solid #E5E7EB', outline: 'none', fontSize: '24px', fontWeight: 'bold', boxSizing: 'border-box', textAlign: 'center' }}
                             autoFocus
                         />
+                        {debugCodeHint && (
+                            <div style={{ fontSize: '12px', color: '#065F46', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '8px 10px', textAlign: 'center' }}>
+                                Código temporal de prueba: <strong>{debugCodeHint}</strong>
+                            </div>
+                        )}
                         <button
                             onClick={handleVerifyUnlockCode}
                             disabled={isVerifying || verifyCode.length < 6}
