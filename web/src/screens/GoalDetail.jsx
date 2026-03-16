@@ -14,7 +14,7 @@ import {
     getMotivationalMessage,
     getPigCoins,
     getPigCoinProgress,
-    getCountdown,
+    getCountdownStatus,
     fmtRD,
     fmtPigCoin,
 } from '../lib/savingsCalc';
