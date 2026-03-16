@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Target, TrendingUp, BarChart2, Bell, Share2, Users, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Zap, Award, Timer, Coins, Clock } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, BarChart2, Bell, Share2, Users, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Zap, Award, Timer, Coins, Clock, Lock } from 'lucide-react';
 import AporteModal from '../components/AporteModal';
 import { API_BASE_URL } from '../lib/config';
 import { ASSET } from '../lib/assets';
