@@ -34,7 +34,7 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
         }
 
         setIsLoading(true)
-        try:
+        try {
             const token = localStorage.getItem('alcanciapp:token');
             const headers = { 'Authorization': `Bearer ${token}` };
 
