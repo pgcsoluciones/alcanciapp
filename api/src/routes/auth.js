@@ -14,51 +14,36 @@ export async function handleAuth(request, env) {
     }
 
     try {
-        // ── [POST] /api/v1/auth/request-token ─────────────────────────────
         if (path === '/api/v1/auth/request-token') {
             const { email, type } = await request.json();
             if (!email || !email.includes('@')) {
                 return new Response(JSON.stringify({ ok: false, error: "Email inválido" }), { status: 400, headers: baseHeaders });
             }
 
-            const normalizedEmail = email.toLowerCase();
-
-            // Validar que el usuario ya existe (impedir auto-registro)
-            const existingUser = await env.DB.prepare(
-                "SELECT id FROM users WHERE email = ?"
-            ).bind(normalizedEmail).first();
-
-            if (!existingUser) {
-                return new Response(JSON.stringify({ ok: false, error: "Usuario no autorizado" }), { status: 403, headers: baseHeaders });
-            }
-
-            // Generar token de 6 dígitos
             const rawToken = Math.floor(100000 + Math.random() * 900000).toString();
             const pepper = env.AUTH_PEPPER || "local_pepper_placeholder";
             const tokenHash = await sha256(rawToken + pepper);
+
             const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-            // Eliminar token previo para evitar conflictos D1
-            await env.DB.prepare(
-                "DELETE FROM auth_tokens WHERE email = ?"
-            ).bind(normalizedEmail).run();
-
-            // INSERT limpio, sin ON CONFLICT
             const tokenId = crypto.randomUUID();
             await env.DB.prepare(
-                "INSERT INTO auth_tokens (id, email, token_hash, expires_at) VALUES (?, ?, ?, ?)"
-            ).bind(tokenId, normalizedEmail, tokenHash, expiresAt).run();
+                "INSERT INTO auth_tokens (id, email, token_hash, expires_at) VALUES (?, ?, ?, ?) " +
+                "ON CONFLICT(email) DO UPDATE SET token_hash=excluded.token_hash, expires_at=excluded.expires_at"
+            ).bind(tokenId, email.toLowerCase(), tokenHash, expiresAt).run();
 
-            console.log(`[MAGIC CODE] Código para ${normalizedEmail} (${type || 'access'}): ${rawToken}`);
+            console.log(`[MAGIC CODE] Código para ${email} (${type || 'access'}): ${rawToken}`);
 
             return new Response(JSON.stringify({
                 ok: true,
                 message: "Código enviado al correo",
-                debug_token: rawToken
+                // TEMP QA/Testing: exponer código solo en desarrollo para pruebas internas.
+                // Mantener removible cuando el envío real de correo sea el flujo definitivo.
+                debug_code: env.ENVIRONMENT === 'development' ? rawToken : undefined,
+                debug_token: env.ENVIRONMENT === 'development' ? rawToken : undefined
             }), { status: 200, headers: baseHeaders });
         }
 
-        // ── [POST] /api/v1/auth/verify-token ──────────────────────────────
         if (path === '/api/v1/auth/verify-token') {
             const { email, token, isUnlock } = await request.json();
             if (!email || !token) {
@@ -68,7 +53,6 @@ export async function handleAuth(request, env) {
             const pepper = env.AUTH_PEPPER || "local_pepper_placeholder";
             const tokenHash = await sha256(token + pepper);
 
-            // 1. Validar token
             const authToken = await env.DB.prepare(
                 "SELECT * FROM auth_tokens WHERE email = ? AND token_hash = ? AND expires_at > datetime('now')"
             ).bind(email.toLowerCase(), tokenHash).first();
@@ -77,7 +61,6 @@ export async function handleAuth(request, env) {
                 return new Response(JSON.stringify({ ok: false, error: "Código inválido o expirado" }), { status: 401, headers: baseHeaders });
             }
 
-            // 2. Si solo es UNLOCK, actualizar sesión actual
             if (isUnlock) {
                 const authHeader = request.headers.get("Authorization");
                 if (!authHeader) {
@@ -96,19 +79,16 @@ export async function handleAuth(request, env) {
                 return new Response(JSON.stringify({ ok: true, unlock_until: unlockUntil }), { status: 200, headers: baseHeaders });
             }
 
-            // 3. Validar que el usuario existe (no se permite auto-registro)
-            const normalizedEmail = email.toLowerCase();
-            const user = await env.DB.prepare(
-                "SELECT * FROM users WHERE email = ?"
-            ).bind(normalizedEmail).first();
+            let user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email.toLowerCase()).first();
+            let userId = user?.id;
 
             if (!user) {
-                return new Response(JSON.stringify({ ok: false, error: "Usuario no autorizado" }), { status: 403, headers: baseHeaders });
+                userId = crypto.randomUUID();
+                await env.DB.prepare("INSERT INTO users (id, email) VALUES (?, ?)")
+                    .bind(userId, email.toLowerCase()).run();
+                user = { id: userId, email: email.toLowerCase() };
             }
 
-            const userId = user.id;
-
-            // 4. Crear sesión
             const sessionId = crypto.randomUUID();
             const rawSessionToken = crypto.randomUUID();
             const sessionHash = await sha256(rawSessionToken + pepper);
@@ -118,15 +98,14 @@ export async function handleAuth(request, env) {
                 "INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)"
             ).bind(sessionId, userId, sessionHash, sessionExpires).run();
 
-            // 5. Limpiar token usado
-            await env.DB.prepare("DELETE FROM auth_tokens WHERE email = ?").bind(normalizedEmail).run();
+            await env.DB.prepare("DELETE FROM auth_tokens WHERE email = ?").bind(email.toLowerCase()).run();
 
             return new Response(JSON.stringify({
                 ok: true,
                 token: rawSessionToken,
                 user: {
                     id: userId,
-                    email: normalizedEmail,
+                    email: email.toLowerCase(),
                     name: user.name || email.split('@')[0],
                     avatar: user.avatar
                 }
