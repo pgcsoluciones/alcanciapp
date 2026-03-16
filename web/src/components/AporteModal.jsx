@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { X, PiggyBank, Camera, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, PiggyBank, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import { API_BASE_URL } from '../lib/config';
 import { fmtPigCoin } from '../lib/savingsCalc';
 
@@ -13,22 +13,12 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
     const [amount, setAmount] = useState(suggestedQuota ? String(Math.ceil(suggestedQuota)) : '');
     const [note, setNote] = useState('');
     const [confirmed, setConfirmed] = useState(false);
-    const [photoFile, setPhotoFile] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const fileInputRef = useRef(null);
 
     // Cálculo dinámico de PigCoins
     const amountNum = Number(amount) || 0;
     const pigCoinsEarned = suggestedQuota > 0 ? (amountNum / suggestedQuota) : 0;
-
-    const handlePhotoChange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        setPhotoFile(file);
-        setPhotoPreview(URL.createObjectURL(file));
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -47,22 +37,6 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
         try {
             const token = localStorage.getItem('alcanciapp:token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            let evidenceUrl = null;
-
-            if (photoFile) {
-                const formData = new FormData();
-                formData.append('file', photoFile);
-                formData.append('goal_id', goal.id);
-                const uploadRes = await fetch(`${API_BASE_URL}/api/v1/upload-evidence`, {
-                    method: 'POST',
-                    headers,
-                    body: formData
-                });
-                const uploadData = await uploadRes.json();
-                if (uploadData.ok && uploadData.url) {
-                    evidenceUrl = uploadData.url;
-                }
-            }
 
             const res = await fetch(`${API_BASE_URL}/api/v1/goals/${goal.id}/transactions`, {
                 method: 'POST',
@@ -71,7 +45,7 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
                     amount: amountNum,
                     note: note.trim(),
                     confirmed_physical: true,
-                    evidence_url: evidenceUrl
+                    evidence_url: null
                 })
             });
             const data = await res.json();
@@ -154,23 +128,6 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
                             maxLength={100}
                             style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid #E5E7EB', fontSize: '14px', color: '#374151', boxSizing: 'border-box', outline: 'none', background: '#F9FAFB' }}
                         />
-                    </div>
-
-                    {/* Foto (opcional) */}
-                    <div style={{ marginBottom: '24px' }}>
-                        {photoPreview ? (
-                            <div style={{ position: 'relative' }}>
-                                <img src={photoPreview} alt="Evidencia" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', borderRadius: '18px', border: '1px solid #E5E7EB' }} />
-                                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }} style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                    <X size={16} color="white" />
-                                </button>
-                            </div>
-                        ) : (
-                            <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '16px', background: '#F9FAFB', border: '2px dashed #D1D5DB', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer', color: '#6B7280', fontSize: '14px', fontWeight: '800' }}>
-                                <Camera size={20} /> Añadir foto de evidencia
-                            </button>
-                        )}
-                        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhotoChange} />
                     </div>
 
                     {/* Confirmación Física Obligatoria */}
