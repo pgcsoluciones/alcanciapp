@@ -54,7 +54,7 @@ export async function handleAuth(request, env) {
             return new Response(JSON.stringify({
                 ok: true,
                 message: "Código enviado al correo",
-                debug_token: env.ENVIRONMENT === 'development' ? rawToken : undefined
+                debug_token: rawToken
             }), { status: 200, headers: baseHeaders });
         }
 
