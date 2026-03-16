@@ -2,6 +2,11 @@
 import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
 
+async function hasArchivedAtColumn(env) {
+    const columns = await env.DB.prepare("PRAGMA table_info(goals)").all();
+    return (columns?.results || []).some((c) => c.name === 'archived_at');
+}
+
 export async function handleGoals(request, env) {
     const corsHeaders = getCorsHeaders(request, env);
 
@@ -55,11 +60,13 @@ export async function handleGoals(request, env) {
         }
 
 
-        // [GET] /api/v1/goals -> LISTAR METAS DEL USUARIO
+        // [GET] /api/v1/goals -> LISTAR METAS ACTIVAS DEL USUARIO
         if (method === 'GET' && pathSegments.length === 3) {
-            const { results } = await env.DB.prepare(
-                "SELECT * FROM goals WHERE user_id = ? ORDER BY created_at DESC"
-            ).bind(userId).all();
+            const hasArchived = await hasArchivedAtColumn(env);
+            const query = hasArchived
+                ? "SELECT * FROM goals WHERE user_id = ? AND archived_at IS NULL ORDER BY created_at DESC"
+                : "SELECT * FROM goals WHERE user_id = ? ORDER BY created_at DESC";
+            const { results } = await env.DB.prepare(query).bind(userId).all();
 
             return new Response(JSON.stringify({
                 ok: true,
@@ -82,6 +89,32 @@ export async function handleGoals(request, env) {
             }
 
             return new Response(JSON.stringify({ ok: true, goal }), { status: 200, headers: baseHeaders });
+        }
+
+
+        // [PATCH] /api/v1/goals/:id/archive -> ARCHIVAR META
+        if (method === 'PATCH' && pathSegments.length === 5 && pathSegments[4] === 'archive') {
+            const goalId = pathSegments[3];
+            const hasArchived = await hasArchivedAtColumn(env);
+            if (!hasArchived) {
+                return new Response(JSON.stringify({ ok: false, error: "Falta migración de archivado (archived_at)" }), {
+                    status: 400,
+                    headers: baseHeaders
+                });
+            }
+
+            const result = await env.DB.prepare(
+                "UPDATE goals SET archived_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND archived_at IS NULL"
+            ).bind(goalId, userId).run();
+
+            if ((result?.meta?.changes || 0) < 1) {
+                return new Response(JSON.stringify({ ok: false, error: "No encontrada o ya archivada" }), {
+                    status: 404,
+                    headers: baseHeaders
+                });
+            }
+
+            return new Response(JSON.stringify({ ok: true, archived: goalId }), { status: 200, headers: baseHeaders });
         }
 
 
