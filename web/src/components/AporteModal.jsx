@@ -102,7 +102,7 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
 
                         {/* Conversión Visual a PigCoin */}
                         <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'white', borderRadius: '14px', border: '1px dashed #D1D5DB' }}>
-                            <span style={{ fontSize: '13px', color: '#4B5563', fontWeight: '700' }}>Ganarás:</span>
+                            <span style={{ fontSize: '13px', color: '#4B5563', fontWeight: '700' }}>Acumularás:</span>
                             <span style={{ fontSize: '18px', fontWeight: '900', color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 {fmtPigCoin(pigCoinsEarned)}
                             </span>
@@ -118,13 +118,13 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
                     {/* Nota */}
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
-                            Nota opcional
+                            Notas de aporte (opcional)
                         </label>
                         <input
                             type="text"
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
-                            placeholder="¿De dónde viene este ahorro?"
+                            placeholder="Agrega una nota para tu control personal"
                             maxLength={100}
                             style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid #E5E7EB', fontSize: '14px', color: '#374151', boxSizing: 'border-box', outline: 'none', background: '#F9FAFB' }}
                         />

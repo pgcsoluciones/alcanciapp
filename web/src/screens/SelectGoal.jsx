@@ -413,7 +413,7 @@ const SelectGoal = ({ onBack, onGoalCreated }) => {
                     </div>
 
                     <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #A7F3D0', fontSize: '12px', color: '#065F46', lineHeight: '1.4', fontWeight: '600' }}>
-                        💡 Cada vez que completes tu cuota de <strong>{currency} {feePerPeriod.toLocaleString()}</strong> por <strong>{selectedFrequency.label}</strong>, ganarás exactamente <strong>1 PigCoin</strong>. En {normalizedDurationMonths} meses tendrás <strong>{totalPeriods}</strong> períodos de aporte.
+                        💡 Cada vez que completes tu cuota de <strong>{currency} {feePerPeriod.toLocaleString()}</strong> por <strong>{selectedFrequency.label}</strong>, acumularás exactamente <strong>1 PigCoin</strong>. En {normalizedDurationMonths} meses tendrás <strong>{totalPeriods}</strong> períodos de aporte.
                     </div>
                 </div>
 

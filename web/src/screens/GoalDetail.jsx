@@ -59,7 +59,7 @@ function BadgeItem({ label, icon }) {
     );
 }
 
-export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
+export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts, onBack }) {
     const [goal, setGoal] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -230,7 +230,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px' }}>
                                 <div>
-                                    <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Equivalente Real</div>
+                                    <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Montos reales</div>
                                     <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em', filter: isUnlocked ? 'none' : 'blur(10px)', transition: 'filter 0.4s' }}>
                                         {isUnlocked ? fmtRD(totalSaved, goal.currency) : '---.---.--'}
                                     </div>
@@ -239,14 +239,22 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                                             onClick={() => setShowUnlockModal(true)}
                                             style={{ background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '10px', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}
                                         >
-                                            <Lock size={12} /> DESBLOQUEAR MONTOS
+                                            <Lock size={12} /> Ver montos reales
+                                        </button>
+                                    )}
+                                    {isUnlocked && (
+                                        <button
+                                            onClick={onHideAmounts}
+                                            style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '10px', color: '#9A3412' }}
+                                        >
+                                            Ocultar montos
                                         </button>
                                     )}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{Math.round(progressPercent)}%</div>
                                     <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>
-                                        COMPLETADO
+                                        COMPLETADA
                                     </div>
                                 </div>
                             </div>
@@ -421,7 +429,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onBack }) {
                                                 {isUnlocked ? fmtRD(tx.amount, goal.currency) : fmtPigCoin(tx.amount / quota)}
                                             </div>
                                             <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>
-                                                {isUnlocked ? fmtPigCoin(tx.amount / quota) : 'PIGCOIN'}
+                                                {isUnlocked ? fmtPigCoin(tx.amount / quota) : 'PigCoin'}
                                             </div>
                                         </div>
                                     </div>
