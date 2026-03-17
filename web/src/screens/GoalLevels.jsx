@@ -82,7 +82,7 @@ export default function GoalLevels({ onBack }) {
 
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#9CA3AF', fontWeight: '700' }}>
                                         <span>PRÓXIMO HITO</span>
-                                        <span style={{ color: '#6B7280' }}>{level.n === 5 ? 'META COMPLETADA' : `${level.n * 25}%`}</span>
+                                        <span style={{ color: '#6B7280' }}>{level.n === 5 ? 'COMPLETADA' : `${level.n * 25}%`}</span>
                                     </div>
                                 </div>
                             );

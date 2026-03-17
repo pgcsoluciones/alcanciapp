@@ -57,6 +57,11 @@ function App() {
         setIsUnlocked(true)
     }
 
+    const handleHideAmounts = () => {
+        setIsUnlocked(false)
+        setUnlockUntil(null)
+    }
+
     const handleLoginSuccess = (newToken, newUser) => {
         localStorage.setItem('alcanciapp:token', newToken)
         localStorage.setItem('alcanciapp:user', JSON.stringify(newUser))
@@ -110,6 +115,7 @@ function App() {
                     user={user}
                     isUnlocked={isUnlocked}
                     onUnlock={handleUnlock}
+                    onHideAmounts={handleHideAmounts}
                     onOpenMenu={() => setIsSidebarOpen(true)}
                     onLogout={handleLogout}
                     onGoToCreate={() => handleNavigate('selectGoal')}
@@ -129,6 +135,7 @@ function App() {
                     goalId={currentView.split(':')[1]}
                     isUnlocked={isUnlocked}
                     onUnlock={handleUnlock}
+                    onHideAmounts={handleHideAmounts}
                     onBack={() => handleNavigate('dashboard')}
                 />
             ) : currentView === 'profile' ? (
