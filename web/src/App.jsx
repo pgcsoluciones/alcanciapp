@@ -46,8 +46,20 @@ function App() {
     }, [isUnlocked, unlockUntil])
 
     const handleUnlock = (until) => {
+        const unlockDate = until ? new Date(until) : null
+        if (!unlockDate || Number.isNaN(unlockDate.getTime()) || unlockDate <= new Date()) {
+            setUnlockUntil(null)
+            setIsUnlocked(false)
+            return
+        }
+
         setUnlockUntil(until)
         setIsUnlocked(true)
+    }
+
+    const handleHideAmounts = () => {
+        setIsUnlocked(false)
+        setUnlockUntil(null)
     }
 
     const handleLoginSuccess = (newToken, newUser) => {
@@ -88,16 +100,22 @@ function App() {
                 />
             )}
 
-            {currentView === 'login' || currentView === 'register' ? (
+            {currentView === 'login' ? (
                 <Login
                     onLoginSuccess={handleLoginSuccess}
-                    onGoToRegister={() => setCurrentView('login')}
+                    onGoToRegister={() => setCurrentView('register')}
+                />
+            ) : currentView === 'register' ? (
+                <Register
+                    onLoginSuccess={handleLoginSuccess}
+                    onGoToLogin={() => setCurrentView('login')}
                 />
             ) : currentView === 'dashboard' ? (
                 <Dashboard
                     user={user}
                     isUnlocked={isUnlocked}
                     onUnlock={handleUnlock}
+                    onHideAmounts={handleHideAmounts}
                     onOpenMenu={() => setIsSidebarOpen(true)}
                     onLogout={handleLogout}
                     onGoToCreate={() => handleNavigate('selectGoal')}
@@ -117,6 +135,7 @@ function App() {
                     goalId={currentView.split(':')[1]}
                     isUnlocked={isUnlocked}
                     onUnlock={handleUnlock}
+                    onHideAmounts={handleHideAmounts}
                     onBack={() => handleNavigate('dashboard')}
                 />
             ) : currentView === 'profile' ? (
@@ -148,4 +167,3 @@ function App() {
 }
 
 export default App;
-
