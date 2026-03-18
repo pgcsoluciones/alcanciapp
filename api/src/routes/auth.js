@@ -53,6 +53,13 @@ export async function handleAuth(request, env) {
             const emailProvider = getEmailProvider(env);
             const emailRes = await emailProvider.sendOtpEmail(emailNormalized, rawCode, { purpose });
 
+            if (!emailRes.ok && env.EMAIL_PROVIDER !== 'console' && env.ENVIRONMENT !== 'development') {
+                return new Response(JSON.stringify({
+                    ok: false,
+                    error: "No se pudo enviar el correo de verificación. Intenta nuevamente más tarde."
+                }), { status: 502, headers: baseHeaders });
+            }
+
             return new Response(JSON.stringify({
                 ok: true,
                 message: "Código enviado",

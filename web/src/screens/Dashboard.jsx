@@ -153,10 +153,8 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
     });
     const recentBadges = [...allBadges].reverse().slice(0, 5);
 
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [verifyingStep, setVerifyingStep] = useState('request'); // 'request' o 'verify'
     const [verifyCode, setVerifyCode] = useState('');
-    const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState('');
 
     const handleRequestUnlockCode = async () => {
