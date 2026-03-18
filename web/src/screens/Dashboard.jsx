@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Target, Zap, TrendingUp, Award, Menu, Coins } from 'lucide-react';
+import { Plus, Target, Zap, TrendingUp, Award, Menu, Coins, Lock } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
-import SensitiveUnlockModal from '../components/SensitiveUnlockModal';
 import { API_BASE_URL } from '../lib/config';
 import { ASSET } from '../lib/assets';
-import { getRhythmStatus, fmtRD, getPigCoins, getAchievements, fmtPigCoin } from '../lib/savingsCalc';
+import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD, getPigCoins, getAchievements, fmtPigCoin } from '../lib/savingsCalc';
 
 // ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
 // ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
@@ -13,16 +12,9 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
     // Meta más avanzada (por % de progreso)
-    const getProgressRatio = (goal) => {
-        const saved = Number(goal?.total_saved || 0);
-        const target = Number(goal?.target_amount || 0);
-        if (!Number.isFinite(saved) || !Number.isFinite(target) || target <= 0) return 0;
-        return saved / target;
-    };
-
     const topGoal = goals.reduce((best, g) => {
-        const p = getProgressRatio(g);
-        const bestP = getProgressRatio(best);
+        const p = Number(g.total_saved || 0) / Number(g.target_amount || 1);
+        const bestP = Number(best.total_saved || 0) / Number(best.target_amount || 1);
         return p > bestP ? g : best;
     }, goals[0]);
 
@@ -85,7 +77,7 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                         </div>
                     </div>
                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
-                        {Math.round(getProgressRatio(topGoal) * 100)}%
+                        {Math.round((Number(topGoal.total_saved) / Number(topGoal.target_amount || 1)) * 100)}%
                     </div>
                 </button>
             )}
@@ -94,9 +86,12 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
 }
 
 // ─── Dashboard Principal ────────────────────────────────────────────────────
-export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, onGoToCreate, onGoToDetail, onOpenMenu, onLogout, onNavigate }) {
+export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, onGoToDetail, onOpenMenu, onLogout, onNavigate }) {
     const [goals, setGoals] = useState([]);
     const [transactions, setTransactions] = useState([]);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [verifyPassword, setVerifyPassword] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -108,21 +103,19 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, o
         try {
             const token = localStorage.getItem('alcanciapp:token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const goalsRes = await fetch(`${API_BASE_URL}/api/v1/goals`, { headers });
+            const [goalsRes, txsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/v1/goals`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/transactions`, { headers })
+            ]);
+
             const goalsData = await goalsRes.json();
+            const txsData = await txsRes.json();
 
             if (!goalsRes.ok || !goalsData.ok) throw new Error(goalsData.error || 'Error en metas');
+            if (!txsRes.ok || !txsData.ok) throw new Error(txsData.error || 'Error en transacciones');
+
             setGoals(goalsData.goals || []);
-
-            const txsRes = await fetch(`${API_BASE_URL}/api/v1/transactions`, { headers });
-            const txsData = await txsRes.json().catch(() => ({}));
-
-            if (txsRes.ok && txsData.ok) {
-                setTransactions(txsData.transactions || []);
-            } else {
-                console.warn('No se pudieron cargar transacciones:', txsData.error || txsRes.statusText);
-                setTransactions([]);
-            }
+            setTransactions(txsData.transactions || []);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -134,19 +127,12 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, o
     const validGoals = Array.isArray(goals) ? goals : [];
     const validTransactions = Array.isArray(transactions) ? transactions : [];
 
-    const activeGoals = validGoals.filter((g) => {
-        const target = Number(g?.target_amount || 0);
-        const saved = Number(g?.total_saved || 0);
-        if (!Number.isFinite(target) || target <= 0) return true;
-        return saved < target;
-    });
-
-    // Total ahorrado consolidado (solo metas activas para KPI principal)
-    const currencies = [...new Set(activeGoals.map(g => g.currency || 'DOP'))];
+    // Total ahorrado consolidado (Solo si todas las metas son misma moneda)
+    const currencies = [...new Set(validGoals.map(g => g.currency || 'DOP'))];
     const showTotalInUSD = currencies.length === 1 && currencies[0] === 'USD';
-    const totalSavedAll = activeGoals.reduce((acc, g) => acc + (Number(g.total_saved) || 0), 0);
+    const totalSavedAll = validGoals.reduce((acc, g) => acc + (Number(g.total_saved) || 0), 0);
 
-    const totalPigCoins = activeGoals.reduce((acc, g) => {
+    const totalPigCoins = validGoals.reduce((acc, g) => {
         const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
         const pc = getPigCoins(g, goalTxs);
         return acc + (isNaN(pc) ? 0 : pc);
@@ -167,8 +153,55 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, o
     });
     const recentBadges = [...allBadges].reverse().slice(0, 5);
 
-    const [showUnlockModal, setShowUnlockModal] = useState(false);
+    const [verifyingStep, setVerifyingStep] = useState('request'); // 'request' o 'verify'
+    const [verifyCode, setVerifyCode] = useState('');
+    const [verifyError, setVerifyError] = useState('');
 
+    const handleRequestUnlockCode = async () => {
+        setIsVerifying(true);
+        setVerifyError('');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: user?.email, type: 'unlock' })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error || 'Error al enviar código');
+            setVerifyingStep('verify');
+        } catch (err) {
+            setVerifyError(err.message);
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    const handleVerifyUnlockCode = async () => {
+        setIsVerifying(true);
+        setVerifyError('');
+        try {
+            const token = localStorage.getItem('alcanciapp:token');
+            const res = await fetch(`${API_BASE_URL}/api/v1/auth/verify-token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ email: user?.email, token: verifyCode, isUnlock: true })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error || 'Código incorrecto');
+
+            onUnlock(data.unlock_until);
+            setShowPasswordModal(false);
+            setVerifyingStep('request');
+            setVerifyCode('');
+        } catch (err) {
+            setVerifyError(err.message);
+        } finally {
+            setIsVerifying(false);
+        }
+    };
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px', boxSizing: 'border-box' }}>
@@ -210,7 +243,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, o
                                     ¡Hola, {user?.name || 'Ahorrador'}! 👋
                                 </div>
                                 <p style={{ color: '#6B7280', fontSize: '14px', marginTop: '4px', marginBottom: 0, fontWeight: '600' }}>
-                                    Tu progreso de ahorro: <strong style={{ color: '#10B981' }}>{fmtPigCoin(totalPigCoins)}</strong>
+                                    Tu progreso actual: <strong style={{ color: '#10B981' }}>{fmtPigCoin(totalPigCoins)}</strong>
                                 </p>
                             </div>
                         </div>
@@ -218,25 +251,17 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, o
                         {/* Balance Global Gamificado */}
                         <div style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', borderRadius: '24px', padding: '26px', color: 'white', marginBottom: '24px', boxShadow: '0 12px 30px rgba(16, 185, 129, 0.25)', position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'relative', zIndex: 1 }}>
-                                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '8px' }}>PigCoins acumulados en metas activas</div>
+                                <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '8px' }}>Tus PigCoins Acumulados</div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', marginBottom: '18px' }}>
                                     <div style={{ fontSize: '42px', fontWeight: '900', lineHeight: 1 }}>{fmtPigCoin(totalPigCoins).replace(' 🐷', '')}</div>
                                     <div style={{ fontSize: '28px', marginBottom: '4px' }}>🐷</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '18px' }}>
-                                    <div onClick={() => isUnlocked ? null : setShowUnlockModal(true)} style={{ cursor: isUnlocked ? 'default' : 'pointer' }}>
-                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Montos reales</div>
+                                    <div onClick={() => isUnlocked ? null : setShowPasswordModal(true)} style={{ cursor: isUnlocked ? 'default' : 'pointer' }}>
+                                        <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Equivalente Real</div>
                                         <div style={{ fontWeight: '900', fontSize: '16px', textDecoration: isUnlocked ? 'none' : 'underline dashed', textUnderlineOffset: '4px' }}>
-                                            {isUnlocked ? fmtRD(totalSavedAll, showTotalInUSD ? 'USD' : 'DOP') : '🔒 Ver montos reales'}
+                                            {isUnlocked ? fmtRD(totalSavedAll, showTotalInUSD ? 'USD' : 'DOP') : 'Ver equivalente'}
                                         </div>
-                                        {isUnlocked && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); onHideAmounts(); }}
-                                                style={{ marginTop: '8px', background: '#FFF7ED', border: '1px solid #FED7AA', color: '#9A3412', borderRadius: '10px', padding: '6px 10px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                                            >
-                                                Ocultar montos
-                                            </button>
-                                        )}
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '3px', fontWeight: '800', textTransform: 'uppercase' }}>Insignias</div>
@@ -250,7 +275,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, o
                         </div>
 
                         {/* Resumen Inteligente */}
-                        <DashboardInsights goals={activeGoals} transactions={validTransactions} onGoToDetail={onGoToDetail} />
+                        <DashboardInsights goals={validGoals} transactions={validTransactions} onGoToDetail={onGoToDetail} />
 
                         {/* Insignias Recientes */}
                         {recentBadges.length > 0 && (
@@ -300,12 +325,71 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onHideAmounts, o
                 )}
             </div>
 
-            <SensitiveUnlockModal
-                isOpen={showUnlockModal}
-                userEmail={user?.email}
-                onClose={() => setShowUnlockModal(false)}
-                onUnlock={onUnlock}
-            />
+            {/* Modal de Validación de Seguridad (RE-AUTH) */}
+            {showPasswordModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: 'white', width: '100%', maxWidth: '340px', borderRadius: '24px', padding: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', fontFamily: 'sans-serif' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                            <div style={{ width: '50px', height: '50px', background: '#F0FDF4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                                <Lock size={24} color="#10B981" />
+                            </div>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#111827' }}>Validación de Seguridad</h3>
+                            <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '6px', fontWeight: '600' }}>
+                                {verifyingStep === 'request'
+                                    ? "Para ver montos reales, enviaremos un código de seguridad a tu correo."
+                                    : `Ingresa el código enviado a ${user?.email}`}
+                            </p>
+                        </div>
+
+                        {verifyError && (
+                            <div style={{ background: '#FEF2F2', color: '#B91C1C', padding: '12px', borderRadius: '12px', marginBottom: '16px', fontSize: '12px', textAlign: 'center' }}>
+                                {verifyError}
+                            </div>
+                        )}
+
+                        {verifyingStep === 'request' ? (
+                            <button
+                                onClick={handleRequestUnlockCode}
+                                disabled={isVerifying}
+                                style={{ width: '100%', background: '#10B981', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: isVerifying ? 'not-allowed' : 'pointer', boxShadow: '0 8px 16px rgba(16,185,129,0.2)' }}
+                            >
+                                {isVerifying ? 'Enviando...' : 'Enviar Código al Correo'}
+                            </button>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <input
+                                    type="number"
+                                    placeholder="Código"
+                                    value={verifyCode}
+                                    onChange={(e) => setVerifyCode(e.target.value)}
+                                    style={{ width: '100%', padding: '16px', borderRadius: '14px', border: '1px solid #E5E7EB', outline: 'none', fontSize: '24px', fontWeight: 'bold', boxSizing: 'border-box', textAlign: 'center' }}
+                                    autoFocus
+                                />
+                                <button
+                                    onClick={handleVerifyUnlockCode}
+                                    disabled={isVerifying || verifyCode.length < 6}
+                                    style={{ width: '100%', background: (isVerifying || verifyCode.length < 6) ? '#9CA3AF' : '#111827', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: (isVerifying || verifyCode.length < 6) ? 'not-allowed' : 'pointer' }}
+                                >
+                                    {isVerifying ? 'Verificando...' : 'Confirmar Código'}
+                                </button>
+                                <button
+                                    onClick={() => setVerifyingStep('request')}
+                                    style={{ background: 'none', border: 'none', color: '#10B981', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                                >
+                                    Reenviar código
+                                </button>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => setShowPasswordModal(false)}
+                            style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', fontWeight: '700', padding: '12px', marginTop: '12px', cursor: 'pointer' }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
