@@ -76,7 +76,7 @@ export async function handleGoals(request, env) {
                     g.*,
                     COALESCE((SELECT SUM(amount) FROM goal_transactions t WHERE t.goal_id = g.id), 0) as total_saved
                 FROM goals g
-                WHERE g.user_id = ? 
+                WHERE g.user_id = ? AND (g.status IS NULL OR g.status != 'archived')
                 ORDER BY g.created_at DESC
             `).bind(userId).all();
 
@@ -126,6 +126,23 @@ export async function handleGoals(request, env) {
             return new Response(JSON.stringify({ ok: true, deleted: goalId }), { status: 200, headers: baseHeaders });
         }
 
+
+        // [PATCH] /api/v1/goals/:id/archive -> ARCHIVAR UNA META
+        if (method === 'PATCH' && pathSegments.length === 5 && pathSegments[4] === 'archive') {
+            const goalId = pathSegments[3];
+
+            const result = await env.DB.prepare(
+                "UPDATE goals SET status = 'archived' WHERE id = ? AND user_id = ?"
+            ).bind(goalId, userId).run();
+
+            if (result.meta && result.meta.changes === 0) {
+                return new Response(JSON.stringify({ ok: false, error: "Meta no encontrada" }), {
+                    status: 404, headers: baseHeaders
+                });
+            }
+
+            return new Response(JSON.stringify({ ok: true, archived: goalId }), { status: 200, headers: baseHeaders });
+        }
 
         return new Response(JSON.stringify({ error: "Route not found or method unsupported" }), {
             status: 404, headers: baseHeaders
