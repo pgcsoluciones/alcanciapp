@@ -11,7 +11,17 @@ export function getPigCoins(goal, transactions) {
     const totalSaved = (transactions && transactions.length > 0)
         ? transactions.reduce((sum, tx) => sum + Number(tx.amount), 0)
         : Number(goal.total_saved || 0);
-    return Number((totalSaved / quota).toFixed(2));
+
+    const rawPigCoins = Number((totalSaved / quota).toFixed(2));
+    const target = Number(goal.target_amount || 0);
+
+    // FIX: Cap de PigCoins para no acumular infinitamente de metas ya completadas
+    if (target > 0 && totalSaved >= target) {
+        const maxPigCoins = Number((target / quota).toFixed(2));
+        return Math.min(rawPigCoins, maxPigCoins);
+    }
+
+    return rawPigCoins;
 }
 
 /**

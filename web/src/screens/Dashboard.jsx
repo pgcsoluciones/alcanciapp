@@ -18,8 +18,13 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
         return p > bestP ? g : best;
     }, goals[0]);
 
-    // Cuota Global en PigCoins (Sumatoria de lo que representa 1 cuota de cada meta)
-    const totalNextPigCoins = goals.length; // 1 PC por cada meta activa
+    // Cuota Global en PigCoins (Sumatoria de lo que representa 1 cuota de cada meta activa NO completada)
+    const activeChallengeGoals = goals.filter(g => {
+        const txs = transactions.filter(t => t.goal_id === g.id);
+        const status = getRhythmStatus(g, txs).status;
+        return status !== 'completed';
+    });
+    const totalNextPigCoins = activeChallengeGoals.length; // 1 PC por cada meta no completada
 
     // Ritmo global
     const rhythms = goals.map(g => getRhythmStatus(g, transactions.filter(t => t.goal_id === g.id)));
