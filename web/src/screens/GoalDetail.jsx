@@ -174,6 +174,19 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
     const pigProg = getPigCoinProgress(goal, currentTransactions);
     const countdown = getCountdownStatus(goal, currentTransactions);
 
+    const getTxPigCoins = (tx) => {
+        const amount = Number(tx?.amount || 0);
+        if (!Number.isFinite(amount) || amount <= 0) return 0;
+
+        if (hasTarget && quota > 0) {
+            const result = amount / quota;
+            return Number.isFinite(result) ? Number(result.toFixed(2)) : 0;
+        }
+
+        const result = amount / 250;
+        return Number.isFinite(result) ? Number(result.toFixed(2)) : 0;
+    };
+
     const freqLabel = (goal.frequency || 'Mensual').toLowerCase();
     const IconComponent = iconMap[goal.icon] || Target;
 

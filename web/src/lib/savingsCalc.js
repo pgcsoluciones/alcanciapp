@@ -28,20 +28,36 @@ export function getPigCoins(goal, transactions) {
  * @returns {{ current: number, remainingRD: number, completePercent: number }}
  */
 export function getPigCoinProgress(goal, transactions) {
-    const quota = getSuggestedQuota(goal);
-    if (!quota || quota <= 0) return { current: 0, remainingRD: 0, completePercent: 0 };
+    const quota = Number(getSuggestedQuota(goal) || 0);
+    if (!Number.isFinite(quota) || quota <= 0) {
+        return { current: 0, remainingRD: 0, completePercent: 0 };
+    }
 
     const totalSaved = (transactions && transactions.length > 0)
-        ? transactions.reduce((sum, tx) => sum + Number(tx.amount), 0)
+        ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
         : Number(goal.total_saved || 0);
 
-    const currentFraction = (totalSaved / quota) % 1;
-    const currentInRD = totalSaved % quota;
-    const remainingRD = quota - currentInRD;
+    if (!Number.isFinite(totalSaved) || totalSaved <= 0) {
+        return { current: 0, remainingRD: quota, completePercent: 0 };
+    }
+
+    const remainder = totalSaved % quota;
+
+    // Si cayó exacto en una cuota completa, mostramos 1.00 / 100% en vez de 0.00 / 0%
+    if (remainder === 0) {
+        return {
+            current: 1,
+            remainingRD: 0,
+            completePercent: 100
+        };
+    }
+
+    const currentFraction = remainder / quota;
+    const remainingRD = quota - remainder;
 
     return {
         current: Number(currentFraction.toFixed(2)),
-        remainingRD,
+        remainingRD: Number(remainingRD.toFixed(2)),
         completePercent: Math.round(currentFraction * 100)
     };
 }
@@ -112,15 +128,16 @@ export function getCountdownStatus(goal, transactions) {
  * @returns {{ status: 'not_started'|'on_track'|'ahead'|'behind'|'completed', label: string, emoji: string, color: string, bg: string }}
  */
 export function getRhythmStatus(goal, transactions) {
-    if (!goal.target_amount || goal.target_amount <= 0) {
+    const targetAmountValue = Number(goal.target_amount || 0);
+    if (!Number.isFinite(targetAmountValue) || targetAmountValue <= 0) {
         return { status: 'no_target', label: 'Sin objetivo', emoji: '—', color: '#6B7280', bg: '#F3F4F6' };
     }
 
     const totalSaved = (transactions && transactions.length > 0)
-        ? transactions.reduce((sum, tx) => sum + Number(tx.amount), 0)
+        ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
         : Number(goal.total_saved || 0);
 
-    if (totalSaved >= goal.target_amount) {
+    if (totalSaved >= targetAmountValue) {
         return { status: 'completed', label: 'Completada', emoji: '🏆', color: '#059669', bg: '#ECFDF5' };
     }
 

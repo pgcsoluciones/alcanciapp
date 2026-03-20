@@ -13,6 +13,21 @@ async function hasArchivedAtColumn(env) {
     }
 }
 
+async function ensureArchivedAtColumn(env) {
+    const exists = await hasArchivedAtColumn(env);
+    if (exists) return true;
+
+    try {
+        await env.DB.prepare("ALTER TABLE goals ADD COLUMN archived_at TEXT").run();
+        return true;
+    } catch (e) {
+        const existsAfter = await hasArchivedAtColumn(env);
+        if (existsAfter) return true;
+        console.error("Error ensuring archived_at column:", e);
+        return false;
+    }
+}
+
 export async function handleGoals(request, env) {
     const corsHeaders = getCorsHeaders(request, env);
 
@@ -101,10 +116,10 @@ export async function handleGoals(request, env) {
         // [PATCH] /api/v1/goals/:id/archive -> ARCHIVAR META
         if (method === 'PATCH' && pathSegments.length === 5 && pathSegments[4] === 'archive') {
             const goalId = pathSegments[3];
-            const hasArchived = await hasArchivedAtColumn(env);
+            const hasArchived = await ensureArchivedAtColumn(env);
             if (!hasArchived) {
-                return new Response(JSON.stringify({ ok: false, error: "Falta migración de archivado (archived_at)" }), {
-                    status: 400,
+                return new Response(JSON.stringify({ ok: false, error: "No se pudo preparar archivado (archived_at)" }), {
+                    status: 500,
                     headers: baseHeaders
                 });
             }
