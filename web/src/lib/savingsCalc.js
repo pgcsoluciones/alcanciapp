@@ -9,9 +9,10 @@ export function getPigCoins(goal, transactions) {
     const quota = getSuggestedQuota(goal);
     if (!quota || quota <= 0) return 0;
     const totalSaved = (transactions && transactions.length > 0)
-        ? transactions.reduce((sum, tx) => sum + Number(tx.amount), 0)
+        ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
         : Number(goal.total_saved || 0);
-    return Number((totalSaved / quota).toFixed(2));
+    const result = totalSaved / quota;
+    return isNaN(result) ? 0 : Number(result.toFixed(2));
 }
 
 /**
@@ -296,8 +297,9 @@ export function getSuggestedQuota(goal) {
     if (freq.includes('semanal')) divisor *= 4.34;
     if (freq.includes('diario')) divisor *= 30.42;
 
-    const rawQuota = goal.target_amount / divisor;
-    return Math.ceil(rawQuota); // Redondeo hacia arriba solicitado
+    const rawQuota = goal.target_amount / (divisor || 1);
+    const result = Math.ceil(rawQuota);
+    return isNaN(result) ? 0 : result;
 }
 
 /**
@@ -354,8 +356,10 @@ export function getPeriodsElapsed(goal) {
 }
 
 export function fmtRD(amount, currency = 'DOP') {
+    const num = Number(amount);
+    if (isNaN(num)) return currency === 'USD' ? '$ 0' : 'RD$ 0';
     const prefix = currency === 'USD' ? '$' : 'RD$ ';
-    return `${prefix}${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
+    return `${prefix}${num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 export function fmtPigCoin(amount) {
