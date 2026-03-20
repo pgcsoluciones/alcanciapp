@@ -1,42 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { Award, ArrowLeft, Lock } from 'lucide-react';
+import { ArrowLeft, Lock } from 'lucide-react';
 import { ASSET } from '../lib/assets';
 import { API_BASE_URL } from '../lib/config';
+import { getAchievements } from '../lib/savingsCalc';
+
+const BADGE_CATALOG = [
+    { code: 'first_goal', name: 'Ahorrador Novato', icon: 'badge_first_goal.png', description: '¡Primer paso dado! Bienvenido a la disciplina.' },
+    { code: 'saving_sprint', name: 'Sprint de Ahorro', icon: 'badge_saving_sprint.png', description: 'Dos aportes en un solo día. ¡Qué energía!' },
+    { code: 'budget_captain', name: 'Capitán del Presupuesto', icon: 'badge_budget_captain.png', description: 'Diste más de lo esperado. ¡Mente de tiburón!' },
+    { code: 'iron_streak', name: 'Disciplina de Hierro', icon: 'badge_iron_streak.png', description: '3 meses consecutivos ahorrando sin falta.' },
+    { code: 'savings_takeoff', name: 'Despegue', icon: 'badge_savings_takeoff.png', description: 'Ya tienes un cuarto de tu meta asegurado.' },
+    { code: 'vault_premium', name: 'Bóveda Premium', icon: 'badge_vault_premium.png', description: '¡Mitad de camino! Tu alcancía pesa mucho.' },
+    { code: 'steady_harvest', name: 'Cosecha Constante', icon: 'badge_steady_harvest.png', description: 'Casi lo logras, el 75% ya es tuyo.' },
+    { code: 'grand_cup', name: 'Copa Gran Progreso', icon: 'badge_grand_cup.png', description: 'Meta completada. Eres ejemplo de disciplina.' },
+];
 
 export default function Achievements({ onBack }) {
-    const [catalog, setCatalog] = useState([]);
+    const [catalog] = useState(BADGE_CATALOG);
     const [userBadges, setUserBadges] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         const loadBadges = async () => {
+            setIsLoading(true);
+            setError('');
             try {
                 const token = localStorage.getItem('alcanciapp:token');
-                const res = await fetch(`${API_BASE_URL}/api/v1/badges`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                if (!res.ok || !data.ok) throw new Error(data.error || 'Error al cargar insignias');
+                const headers = { 'Authorization': `Bearer ${token}` };
 
-                setCatalog(data.catalog || []);
-                setUserBadges(data.user_badges || []);
+                const [goalsRes, txsRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/v1/goals`, { headers }),
+                    fetch(`${API_BASE_URL}/api/v1/transactions`, { headers })
+                ]);
+
+                const goalsData = await goalsRes.json();
+                const txsData = await txsRes.json();
+
+                if (!goalsRes.ok || !goalsData.ok) throw new Error(goalsData.error || 'Error al cargar metas');
+                if (!txsRes.ok || !txsData.ok) throw new Error(txsData.error || 'Error al cargar transacciones');
+
+                const goals = goalsData.goals || [];
+                const transactions = txsData.transactions || [];
+                const unlocked = [];
+
+                goals.forEach(goal => {
+                    const goalTxs = transactions.filter(tx => tx && tx.goal_id === goal.id);
+                    const achievements = getAchievements(goal, goalTxs) || [];
+                    achievements.forEach(a => {
+                        if (!unlocked.find(x => x.badge_code === a.id)) {
+                            unlocked.push({ badge_code: a.id });
+                        }
+                    });
+                });
+
+                setUserBadges(unlocked);
             } catch (err) {
                 setError(err.message);
             } finally {
                 setIsLoading(false);
             }
         };
+
         loadBadges();
     }, []);
 
-    if (isLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>Cargando tus logros...</div>;
+    if (isLoading) {
+        return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>Cargando tus logros...</div>;
+    }
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px' }}>
             <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-
-                {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                     <button onClick={onBack} style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                         <ArrowLeft size={20} color="#374151" />
@@ -51,7 +86,6 @@ export default function Achievements({ onBack }) {
 
                 {error && <div style={{ color: 'red', marginBottom: '16px' }}>{error}</div>}
 
-                {/* Grid de Insignias */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     {catalog.map(badge => {
                         const isUnlocked = userBadges.some(ub => ub.badge_code === badge.code);
