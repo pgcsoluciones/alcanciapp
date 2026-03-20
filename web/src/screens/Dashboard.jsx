@@ -136,8 +136,11 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
     const currencies = [...new Set(validGoals.map(g => g.currency || 'DOP'))];
     const showTotalInUSD = currencies.length === 1 && currencies[0] === 'USD';
     const totalSavedAll = validGoals.reduce((acc, g) => {
-        const amt = Number(g.total_saved);
-        return acc + (isNaN(amt) ? 0 : amt);
+        const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
+        const goalSaved = goalTxs.length > 0
+            ? goalTxs.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
+            : (Number(g.total_saved) || 0);
+        return acc + goalSaved;
     }, 0);
 
     const totalPigCoins = validGoals.reduce((acc, g) => {

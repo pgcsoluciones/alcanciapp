@@ -441,10 +441,10 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
                                             <div style={{ fontWeight: '900', color: '#10B981', fontSize: '17px' }}>
-                                                {isUnlocked ? fmtRD(tx.amount, goal.currency) : fmtPigCoin(tx.amount / quota)}
+                                                {isUnlocked ? fmtRD(tx.amount, goal.currency) : fmtPigCoin(getTxPigCoins(tx))}
                                             </div>
                                             <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>
-                                                {isUnlocked ? fmtPigCoin(tx.amount / quota) : 'PigCoin'}
+                                                {isUnlocked ? fmtPigCoin(getTxPigCoins(tx)) : 'PigCoin'}
                                             </div>
                                         </div>
                                     </div>
