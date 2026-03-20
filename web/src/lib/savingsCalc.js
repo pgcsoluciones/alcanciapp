@@ -7,10 +7,16 @@
  */
 export function getPigCoins(goal, transactions) {
     const quota = getSuggestedQuota(goal);
-    if (!quota || quota <= 0) return 0;
     const totalSaved = (transactions && transactions.length > 0)
         ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
         : Number(goal.total_saved || 0);
+
+    // Si no hay cuota (ahorro libre), usamos 250 como base simbólica (consistente con GoalCard)
+    if (!quota || quota <= 0) {
+        const result = totalSaved / 250;
+        return isNaN(result) ? 0 : Number(result.toFixed(2));
+    }
+
     const result = totalSaved / quota;
     return isNaN(result) ? 0 : Number(result.toFixed(2));
 }
@@ -52,6 +58,10 @@ export function getCountdownStatus(goal, transactions) {
     const rhythm = getRhythmStatus(goal, transactions);
     if (rhythm.status === 'completed') {
         return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
+    }
+
+    if (rhythm.status === 'no_target') {
+        return { label: 'Ahorro Libre — Suma a tu propio ritmo 🐷', totalSeconds: 0, status: 'idle' };
     }
 
     if (rhythm.status === 'ahead') {
@@ -196,6 +206,14 @@ export function getAchievements(goal, transactions) {
             description: 'Dos aportes en un solo día. ¡Qué energía!'
         });
     }
+    if (hasSprint) {
+        achieved.push({
+            id: 'saving_sprint',
+            label: 'Sprint de Ahorro',
+            icon: 'badge_saving_sprint.png',
+            description: 'Dos aportes en un solo día. ¡Qué energía!'
+        });
+    }
 
     // 3. Ahorrador Extra (Aporte > 1.5x cuota)
     const hasExtra = transactions.some(tx => Number(tx.amount) >= quota * 1.5);
@@ -290,15 +308,14 @@ export function getMotivationalMessage(goal, transactions) {
  * Redondea siempre hacia arriba al entero siguiente.
  */
 export function getSuggestedQuota(goal) {
-    if (!goal.duration_months) return 0;
+    const target = Number(goal.target_amount || 0);
+    if (target <= 0 || !goal.duration_months) return 0;
+
     const freq = (goal.frequency || 'Mensual').toLowerCase();
     let divisor = goal.duration_months;
     if (freq.includes('quincenal')) divisor *= 2;
     if (freq.includes('semanal')) divisor *= 4.34;
     if (freq.includes('diario')) divisor *= 30.42;
-
-    const target = Number(goal.target_amount || 0);
-    if (target <= 0) return 0;
 
     const rawQuota = target / (divisor || 1);
     const result = Math.ceil(rawQuota);
