@@ -16,6 +16,7 @@ import {
     getPigCoins,
     getPigCoinProgress,
     getCountdownStatus,
+    getGoalProgress,
     fmtRD,
     fmtPigCoin,
 } from '../lib/savingsCalc';
@@ -253,7 +254,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                                     )}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{Math.round(progressPercent)}%</div>
+                                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{progressPercent}%</div>
                                     <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>
                                         COMPLETADA
                                     </div>
@@ -384,7 +385,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                 )}
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                    {progressPercent >= 100 && (
+                    {(progressPercent >= 100 || !hasTarget) && (
                         <button
                             onClick={handleArchiveGoal}
                             disabled={isArchiving}
