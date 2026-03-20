@@ -60,10 +60,6 @@ export function getCountdownStatus(goal, transactions) {
         return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
     }
 
-    if (rhythm.status === 'no_target') {
-        return { label: 'Ahorro Libre — Suma a tu propio ritmo 🐷', totalSeconds: 0, status: 'idle' };
-    }
-
     if (rhythm.status === 'ahead') {
         return { label: 'Vas adelantado. Ya sumaste tu próximo PigCoin antes de tiempo.', totalSeconds: 0, status: 'ahead' };
     }
