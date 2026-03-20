@@ -385,7 +385,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                 )}
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                    {(progressPercent >= 100 || !hasTarget) && (
+                    {progressPercent >= 100 && (
                         <button
                             onClick={handleArchiveGoal}
                             disabled={isArchiving}
