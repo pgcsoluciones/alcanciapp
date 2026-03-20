@@ -18,8 +18,13 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
         return p > bestP ? g : best;
     }, goals[0]);
 
-    // Cuota Global en PigCoins (Sumatoria de lo que representa 1 cuota de cada meta)
-    const totalNextPigCoins = goals.length; // 1 PC por cada meta activa
+    // Cuota Global en PigCoins (Sumatoria de lo que representa 1 cuota de cada meta activa NO completada)
+    const activeChallengeGoals = goals.filter(g => {
+        const txs = transactions.filter(t => t.goal_id === g.id);
+        const status = getRhythmStatus(g, txs).status;
+        return status !== 'completed';
+    });
+    const totalNextPigCoins = activeChallengeGoals.length; // 1 PC por cada meta no completada
 
     // Ritmo global
     const rhythms = goals.map(g => getRhythmStatus(g, transactions.filter(t => t.goal_id === g.id)));
@@ -130,10 +135,18 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
     // Total ahorrado consolidado (Solo si todas las metas son misma moneda)
     const currencies = [...new Set(validGoals.map(g => g.currency || 'DOP'))];
     const showTotalInUSD = currencies.length === 1 && currencies[0] === 'USD';
-    const totalSavedAll = validGoals.reduce((acc, g) => acc + (Number(g.total_saved) || 0), 0);
+    const totalSavedAll = validGoals.reduce((acc, g) => {
+        const amt = Number(g.total_saved);
+        return acc + (isNaN(amt) ? 0 : amt);
+    }, 0);
 
     const totalPigCoins = validGoals.reduce((acc, g) => {
         const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
+        const status = getRhythmStatus(g, goalTxs).status;
+
+        // El usuario pide que NO se sigan sumando PigCoins de metas ya completadas al acumulado general
+        if (status === 'completed') return acc;
+
         const pc = getPigCoins(g, goalTxs);
         return acc + (isNaN(pc) ? 0 : pc);
     }, 0);

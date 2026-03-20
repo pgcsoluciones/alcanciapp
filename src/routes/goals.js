@@ -3,8 +3,14 @@ import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
 
 async function hasArchivedAtColumn(env) {
-    const columns = await env.DB.prepare("PRAGMA table_info(goals)").all();
-    return (columns?.results || []).some((c) => c.name === 'archived_at');
+    try {
+        const columns = await env.DB.prepare("PRAGMA table_info(goals)").all();
+        const rows = Array.isArray(columns?.results) ? columns.results : (Array.isArray(columns) ? columns : []);
+        return rows.some((c) => c.name === 'archived_at');
+    } catch (e) {
+        console.error("Error checking columns:", e);
+        return false;
+    }
 }
 
 export async function handleGoals(request, env) {
