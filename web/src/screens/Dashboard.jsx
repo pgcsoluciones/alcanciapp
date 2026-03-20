@@ -4,7 +4,7 @@ import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
 import { API_BASE_URL } from '../lib/config';
 import { ASSET } from '../lib/assets';
-import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD, getPigCoins, getAchievements, fmtPigCoin } from '../lib/savingsCalc';
+import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD, getPigCoins, getAchievements, fmtPigCoin, getGoalProgress } from '../lib/savingsCalc';
 
 // ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
 // ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
