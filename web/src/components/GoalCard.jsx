@@ -1,5 +1,5 @@
 import { Clock, Lock, Globe, Plane, Home, Bike, GraduationCap, Laptop, HeartPulse, Briefcase, Target, TrendingUp, Timer } from 'lucide-react';
-import { getSuggestedQuota, getRhythmStatus, fmtRD, getPigCoins, getCountdownStatus, fmtPigCoin } from '../lib/savingsCalc';
+import { getSuggestedQuota, getRhythmStatus, fmtRD, getPigCoins, getCountdownStatus, fmtPigCoin, getGoalProgress } from '../lib/savingsCalc';
 
 const iconMap = {
     'vacation': Plane,
@@ -12,14 +12,17 @@ const iconMap = {
 };
 
 export default function GoalCard({ goal, isUnlocked, onClick }) {
-    const hasTarget = typeof goal.target_amount === 'number' && goal.target_amount > 0;
-    const totalSaved = Number(goal.total_saved || 0);
-    const progressPercent = hasTarget ? Math.min((totalSaved / goal.target_amount) * 100, 100) : 0;
+    const transactions = goal._transactions || [];
+    const targetAmountValue = Number(goal.target_amount || 0);
+    const hasTarget = targetAmountValue > 0;
+    const totalSaved = transactions.length > 0
+        ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
+        : Number(goal.total_saved || 0);
+    const progressPercent = hasTarget ? getGoalProgress(goal, transactions) : 0;
     const IconComponent = iconMap[goal.icon] || Target;
 
-    const transactions = goal._transactions || [];
-    const rhythm = hasTarget ? getRhythmStatus(goal, transactions) : null;
-    const pigCoins = hasTarget ? getPigCoins(goal, transactions) : 0;
+    const rhythm = getRhythmStatus(goal, transactions);
+    const pigCoins = getPigCoins(goal, transactions);
     const countdown = getCountdownStatus(goal, transactions);
 
     return (
@@ -126,8 +129,13 @@ export default function GoalCard({ goal, isUnlocked, onClick }) {
                     </div>
                 </div>
             ) : (
-                <div style={{ fontSize: '20px', fontWeight: '900', color: '#111827' }}>
-                    {fmtPigCoin(totalSaved / (goal.target_amount || 250))}
+                <div>
+                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#111827' }}>
+                        {fmtPigCoin(pigCoins)}
+                    </div>
+                    <div style={{ color: '#10B981', fontSize: '12px', fontWeight: '700', marginTop: '2px', opacity: 0.8 }}>
+                        {isUnlocked ? fmtRD(totalSaved, goal.currency) : 'Total PigCoins'}
+                    </div>
                 </div>
             )}
         </div>

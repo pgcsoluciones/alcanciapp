@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { X, PiggyBank, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import { API_BASE_URL } from '../lib/config';
-import { fmtPigCoin } from '../lib/savingsCalc';
+import { fmtPigCoin, getSuggestedQuota } from '../lib/savingsCalc';
 
 /**
  * AporteModal — Modal obligatorio para registrar un aporte.
  */
 export default function AporteModal({ goal, onClose, onSuccess }) {
-    const suggestedQuota = goal.quota || goal.target_amount / (goal.duration_months || 1);
+    const hasTarget = Number(goal.target_amount || 0) > 0;
+    const suggestedQuota = hasTarget ? getSuggestedQuota(goal) : 250;
     const currency = goal.currency || 'DOP';
 
     const [amount, setAmount] = useState(suggestedQuota ? String(Math.ceil(suggestedQuota)) : '');
@@ -108,7 +109,7 @@ export default function AporteModal({ goal, onClose, onSuccess }) {
                             </span>
                         </div>
 
-                        {suggestedQuota > 0 && (
+                        {hasTarget && suggestedQuota > 0 && (
                             <button type="button" onClick={() => setAmount(String(Math.ceil(suggestedQuota)))} style={{ marginTop: '12px', background: 'none', border: 'none', color: '#10B981', fontSize: '12px', cursor: 'pointer', fontWeight: '800', padding: 0, textDecoration: 'underline' }}>
                                 Usar cuota sugerida ({currency} {Math.ceil(suggestedQuota).toLocaleString()})
                             </button>
