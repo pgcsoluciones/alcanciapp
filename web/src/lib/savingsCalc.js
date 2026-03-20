@@ -11,6 +11,7 @@ export function getPigCoins(goal, transactions) {
     const totalSaved = (transactions && transactions.length > 0)
         ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
         : Number(goal.total_saved || 0);
+
     const result = totalSaved / quota;
     return isNaN(result) ? 0 : Number(result.toFixed(2));
 }
@@ -290,14 +291,16 @@ export function getMotivationalMessage(goal, transactions) {
  * Redondea siempre hacia arriba al entero siguiente.
  */
 export function getSuggestedQuota(goal) {
-    if (!goal.target_amount || !goal.duration_months) return 0;
+    const target = Number(goal.target_amount || 0);
+    if (target <= 0 || !goal.duration_months) return 0;
+
     const freq = (goal.frequency || 'Mensual').toLowerCase();
     let divisor = goal.duration_months;
     if (freq.includes('quincenal')) divisor *= 2;
     if (freq.includes('semanal')) divisor *= 4.34;
     if (freq.includes('diario')) divisor *= 30.42;
 
-    const rawQuota = goal.target_amount / (divisor || 1);
+    const rawQuota = target / (divisor || 1);
     const result = Math.ceil(rawQuota);
     return isNaN(result) ? 0 : result;
 }
@@ -360,6 +363,22 @@ export function fmtRD(amount, currency = 'DOP') {
     if (isNaN(num)) return currency === 'USD' ? '$ 0' : 'RD$ 0';
     const prefix = currency === 'USD' ? '$' : 'RD$ ';
     return `${prefix}${num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+/**
+ * Calcula el porcentaje de progreso de una meta de forma segura.
+ * @param {Object} goal 
+ * @param {Array} transactions 
+ * @returns {number} 0 a 100
+ */
+export function getGoalProgress(goal, transactions) {
+    const target = Number(goal.target_amount || 0);
+    if (target <= 0) return 0;
+    const totalSaved = (transactions && transactions.length > 0)
+        ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
+        : Number(goal.total_saved || 0);
+    const progress = (totalSaved / target) * 100;
+    return isNaN(progress) ? 0 : Math.min(Math.round(progress), 100);
 }
 
 export function fmtPigCoin(amount) {

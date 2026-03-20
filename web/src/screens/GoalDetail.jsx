@@ -16,6 +16,7 @@ import {
     getPigCoins,
     getPigCoinProgress,
     getCountdownStatus,
+    getGoalProgress,
     fmtRD,
     fmtPigCoin,
 } from '../lib/savingsCalc';
@@ -159,10 +160,11 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
         );
     }
 
-    const hasTarget = typeof goal.target_amount === 'number' && goal.target_amount > 0;
+    const targetAmountValue = Number(goal.target_amount || 0);
+    const hasTarget = targetAmountValue > 0;
     const currentTransactions = transactions || [];
     const totalSaved = Number(goal.total_saved || 0);
-    const progressPercent = hasTarget ? Math.min((totalSaved / goal.target_amount) * 100, 100) : 0;
+    const progressPercent = getGoalProgress(goal, currentTransactions);
     const quota = getSuggestedQuota(goal);
     const rhythm = getRhythmStatus(goal, currentTransactions);
     const streak = getStreakMonths(currentTransactions);
@@ -252,7 +254,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                                     )}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{Math.round(progressPercent)}%</div>
+                                    <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>{progressPercent}%</div>
                                     <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '700' }}>
                                         COMPLETADA
                                     </div>

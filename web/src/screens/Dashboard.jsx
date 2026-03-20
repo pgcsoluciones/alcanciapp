@@ -11,10 +11,10 @@ import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD, getPigCoins, g
 function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
-    // Meta más avanzada (por % de progreso)
+    // Meta más avanzada (basado en la lógica centralizada de progreso)
     const topGoal = goals.reduce((best, g) => {
-        const p = Number(g.total_saved || 0) / Number(g.target_amount || 1);
-        const bestP = Number(best.total_saved || 0) / Number(best.target_amount || 1);
+        const p = getGoalProgress(g, transactions.filter(t => t.goal_id === g.id));
+        const bestP = getGoalProgress(best, transactions.filter(t => t.goal_id === best.id));
         return p > bestP ? g : best;
     }, goals[0]);
 
@@ -82,7 +82,7 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
                         </div>
                     </div>
                     <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
-                        {Math.round((Number(topGoal.total_saved) / Number(topGoal.target_amount || 1)) * 100)}%
+                        {getGoalProgress(topGoal, transactions.filter(t => t.goal_id === topGoal.id))}%
                     </div>
                 </button>
             )}
