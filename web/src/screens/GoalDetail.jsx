@@ -163,7 +163,9 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
     const targetAmountValue = Number(goal.target_amount || 0);
     const hasTarget = targetAmountValue > 0;
     const currentTransactions = transactions || [];
-    const totalSaved = Number(goal.total_saved || 0);
+    const totalSaved = currentTransactions.length > 0
+        ? currentTransactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
+        : Number(goal.total_saved || 0);
     const progressPercent = getGoalProgress(goal, currentTransactions);
     const quota = getSuggestedQuota(goal);
     const rhythm = getRhythmStatus(goal, currentTransactions);
