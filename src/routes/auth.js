@@ -1,6 +1,7 @@
 // src/routes/auth.js
 import { sha256, authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
+import { getEmailProvider } from '../lib/email.js';
 
 function jsonResponse(payload, status, corsHeaders) {
     return new Response(JSON.stringify(payload), {
@@ -133,8 +134,16 @@ export async function handleRequestToken(request, env) {
             throw new Error(batch[0]?.error || batch[1]?.error || 'No se pudo guardar el código');
         }
 
-        // Integración de correo pendiente en V1: por ahora se registra en logs para verificación operativa.
-        console.log(`[AUTH][request-token] email=${email} code=${code}`);
+        // Enviar Email real (o consola según configuración)
+        const emailProvider = getEmailProvider(env);
+        const emailRes = await emailProvider.sendOtpEmail(email, code, { purpose: 'auth_login' });
+
+        if (!emailRes.ok && env.EMAIL_PROVIDER !== 'console') {
+            return jsonResponse({
+                ok: false,
+                error: 'No se pudo enviar el correo de verificación. Intenta nuevamente más tarde.'
+            }, 502, corsHeaders);
+        }
 
         const response = { ok: true, message: 'Código enviado' };
         if (env.AUTH_DEBUG_CODES === 'true') {
