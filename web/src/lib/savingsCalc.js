@@ -7,15 +7,10 @@
  */
 export function getPigCoins(goal, transactions) {
     const quota = getSuggestedQuota(goal);
+    if (!quota || quota <= 0) return 0;
     const totalSaved = (transactions && transactions.length > 0)
         ? transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
         : Number(goal.total_saved || 0);
-
-    // Si no hay cuota (ahorro libre), usamos 250 como base simbólica (consistente con GoalCard)
-    if (!quota || quota <= 0) {
-        const result = totalSaved / 250;
-        return isNaN(result) ? 0 : Number(result.toFixed(2));
-    }
 
     const result = totalSaved / quota;
     return isNaN(result) ? 0 : Number(result.toFixed(2));
@@ -194,14 +189,6 @@ export function getAchievements(goal, transactions) {
             return d1 === d2;
         });
     });
-    if (hasSprint) {
-        achieved.push({
-            id: 'saving_sprint',
-            label: 'Sprint de Ahorro',
-            icon: 'badge_saving_sprint.png',
-            description: 'Dos aportes en un solo día. ¡Qué energía!'
-        });
-    }
     if (hasSprint) {
         achieved.push({
             id: 'saving_sprint',
