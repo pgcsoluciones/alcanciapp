@@ -285,7 +285,31 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                             </div>
                         </>
                     ) : (
-                        <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827' }}>{isUnlocked ? fmtRD(totalSaved, goal.currency) : fmtPigCoin(pigCoins)}</div>
+                        <>
+                            <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em', filter: isUnlocked ? 'none' : 'blur(10px)', transition: 'filter 0.4s' }}>
+                                    {isUnlocked ? fmtRD(totalSaved, goal.currency) : '---.---.--'}
+                                </div>
+
+                                {!isUnlocked && (
+                                    <button
+                                        onClick={() => setShowUnlockModal(true)}
+                                        style={{ background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '10px', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    >
+                                        <Lock size={12} /> Ver montos reales
+                                    </button>
+                                )}
+
+                                {isUnlocked && (
+                                    <button
+                                        onClick={onHideAmounts}
+                                        style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: '10px', padding: '8px 14px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '10px', color: '#9A3412' }}
+                                    >
+                                        Ocultar montos
+                                    </button>
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -398,7 +422,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                 )}
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                    {(progressPercent >= 100 || !hasTarget) && (
+                    {progressPercent >= 100 && (
                         <button
                             onClick={handleArchiveGoal}
                             disabled={isArchiving}
