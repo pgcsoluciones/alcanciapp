@@ -186,6 +186,7 @@ export function getStreakMonths(transactions) {
 
 /**
  * Retorna array de insignias desbloqueadas según reglas de AlcanciApp V1.
+ * Estas son por meta individual y se mantienen para pantallas que aún dependen de esa lógica.
  * @param {Object} goal
  * @param {Array} transactions
  * @returns {Array<{ id: string, label: string, icon: string, description: string }>}
@@ -246,7 +247,7 @@ export function getAchievements(goal, transactions) {
         });
     }
 
-    // 5. Hitos de progreso (25, 50, 75, 100)
+    // 5. Hitos de progreso por meta individual (se mantienen)
     if (progress >= 25) {
         achieved.push({
             id: 'savings_takeoff',
@@ -277,6 +278,132 @@ export function getAchievements(goal, transactions) {
             label: 'Copa Gran Progreso',
             icon: 'badge_grand_progress_cup.png',
             description: '¡META LOGRADA! Eres un maestro del ahorro.'
+        });
+    }
+
+    return achieved;
+}
+
+/**
+ * Retorna insignias globales del perfil, calculadas con el historial completo.
+ * Conserva aparte la lógica de hitos por meta individual.
+ * @param {Array} goals
+ * @param {Array} transactions
+ * @returns {Array<{ id: string, label: string, icon: string, description: string }>}
+ */
+export function getProfileAchievements(goals, transactions) {
+    const safeGoals = Array.isArray(goals) ? goals : [];
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
+
+    if (safeTransactions.length === 0) return [];
+
+    const achieved = [];
+
+    // 1. Primer aporte global del perfil
+    achieved.push({
+        id: 'first_goal',
+        label: 'Ahorrador Novato',
+        icon: 'badge_first_goal.png',
+        description: '¡Primer paso dado! Bienvenido a la disciplina.'
+    });
+
+    // 2. Sprint global: 2 o más aportes el mismo día, sin importar la meta
+    const txCountByDay = safeTransactions.reduce((acc, tx) => {
+        const dayKey = new Date(tx.created_at).toDateString();
+        acc[dayKey] = (acc[dayKey] || 0) + 1;
+        return acc;
+    }, {});
+
+    const hasSprint = Object.values(txCountByDay).some(count => count >= 2);
+    if (hasSprint) {
+        achieved.push({
+            id: 'saving_sprint',
+            label: 'Sprint de Ahorro',
+            icon: 'badge_saving_sprint.png',
+            description: 'Dos aportes en un solo día. ¡Qué energía!'
+        });
+    }
+
+    // 3. Racha global del perfil
+    const streak = getStreakMonths(safeTransactions);
+    if (streak >= 3) {
+        achieved.push({
+            id: 'iron_streak',
+            label: 'Disciplina de Hierro',
+            icon: 'badge_iron_streak.png',
+            description: '3 meses consecutivos ahorrando sin falta.'
+        });
+    }
+
+    // 4. Capitán del presupuesto: si en alguna meta con objetivo dio un aporte >= 1.5x cuota
+    const goalsById = safeGoals.reduce((acc, goal) => {
+        acc[goal.id] = goal;
+        return acc;
+    }, {});
+
+    const hasExtra = safeTransactions.some(tx => {
+        const goal = goalsById[tx.goal_id];
+        if (!goal) return false;
+
+        const quota = getSuggestedQuota(goal);
+        if (!quota || quota <= 0) return false;
+
+        return Number(tx.amount) >= quota * 1.5;
+    });
+
+    if (hasExtra) {
+        achieved.push({
+            id: 'budget_captain',
+            label: 'Capitán del Presupuesto',
+            icon: 'badge_budget_captain.png',
+            description: 'Diste más de lo esperado. ¡Mente de tiburón!'
+        });
+    }
+
+    // 5. Progreso global del perfil basado en metas completadas
+    // Se excluyen metas sin target_amount válido.
+    const totalCompletableGoals = safeGoals.filter(goal => Number(goal.target_amount || 0) > 0);
+
+    const completedGoals = totalCompletableGoals.filter(goal => {
+        const goalTxs = safeTransactions.filter(tx => tx.goal_id === goal.id);
+        const totalSaved = goalTxs.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+        return totalSaved >= Number(goal.target_amount || 0);
+    });
+
+    const completedCount = completedGoals.length;
+    const totalCount = totalCompletableGoals.length;
+    const globalProgress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+    if (globalProgress >= 25) {
+        achieved.push({
+            id: 'savings_takeoff',
+            label: 'Despegue',
+            icon: 'badge_savings_takeoff.png',
+            description: 'Has completado al menos el 25% de tus metas con objetivo.'
+        });
+    }
+    if (globalProgress >= 50) {
+        achieved.push({
+            id: 'vault_premium',
+            label: 'Bóveda Premium',
+            icon: 'badge_vault_premium.png',
+            description: 'Has completado al menos la mitad de tus metas con objetivo.'
+        });
+    }
+    if (globalProgress >= 75) {
+        achieved.push({
+            id: 'steady_harvest',
+            label: 'Cosecha Constante',
+            icon: 'badge_steady_harvest.png',
+            description: 'Has completado al menos el 75% de tus metas con objetivo.'
+        });
+    }
+    if (globalProgress >= 100 && totalCount > 0) {
+        achieved.push({
+            id: 'grand_cup',
+            label: 'Copa Gran Progreso',
+            icon: 'badge_grand_progress_cup.png',
+            description: 'Has completado todas tus metas con objetivo. Eres un maestro del ahorro.'
         });
     }
 
@@ -393,8 +520,8 @@ export function fmtRD(amount, currency = 'DOP') {
 
 /**
  * Calcula el porcentaje de progreso de una meta de forma segura.
- * @param {Object} goal 
- * @param {Array} transactions 
+ * @param {Object} goal
+ * @param {Array} transactions
  * @returns {number} 0 a 100
  */
 export function getGoalProgress(goal, transactions) {
