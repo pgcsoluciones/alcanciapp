@@ -121,6 +121,8 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
 
             setGoals(goalsData.goals || []);
             setTransactions(txsData.transactions || []);
+
+            console.log('GOALS RAW', goalsData.goals);
         } catch (err) {
             setError(err.message);
         } finally {
