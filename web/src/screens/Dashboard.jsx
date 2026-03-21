@@ -12,11 +12,15 @@ function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
     // Meta más avanzada (basado en la lógica centralizada de progreso)
-    const topGoal = goals.reduce((best, g) => {
+    const leaderboardGoals = goals.filter(g => Number(g.target_amount || 0) > 0);
+
+const topGoal = leaderboardGoals.length > 0
+    ? leaderboardGoals.reduce((best, g) => {
         const p = getGoalProgress(g, transactions.filter(t => t.goal_id === g.id));
         const bestP = getGoalProgress(best, transactions.filter(t => t.goal_id === best.id));
         return p > bestP ? g : best;
-    }, goals[0]);
+    }, leaderboardGoals[0])
+    : null;
 
     // Cuota Global en PigCoins (Sumatoria de lo que representa 1 cuota de cada meta activa NO completada)
     const activeChallengeGoals = goals.filter(g => {
