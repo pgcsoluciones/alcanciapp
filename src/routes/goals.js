@@ -153,7 +153,8 @@ export async function handleGoals(request, env) {
 
             if (!goal) {
                 return new Response(JSON.stringify({ ok: false, error: "Meta no encontrada o no pertenece al usuario" }), {
-                    status: 404, headers: baseHeaders
+                    status: 404,
+                    headers: baseHeaders
                 });
             }
 
@@ -196,7 +197,8 @@ export async function handleGoals(request, env) {
 
             if (result.meta && result.meta.changes === 0) {
                 return new Response(JSON.stringify({ ok: false, error: "No encontrada" }), {
-                    status: 404, headers: baseHeaders
+                    status: 404,
+                    headers: baseHeaders
                 });
             }
 
@@ -204,12 +206,14 @@ export async function handleGoals(request, env) {
         }
 
         return new Response(JSON.stringify({ error: "Route not found or method unsupported" }), {
-            status: 404, headers: baseHeaders
+            status: 404,
+            headers: baseHeaders
         });
 
     } catch (e) {
         return new Response(JSON.stringify({ ok: false, error: e.message }), {
-            status: 500, headers: baseHeaders
+            status: 500,
+            headers: baseHeaders
         });
     }
 }
