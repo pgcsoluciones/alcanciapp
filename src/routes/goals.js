@@ -52,18 +52,65 @@ export async function handleGoals(request, env) {
         if (method === 'POST' && pathSegments.length === 3) {
             const body = await request.json();
 
-            // Validaciones
-            if (!body.name || !body.duration_months || !body.frequency || !body.privacy) {
-                return new Response(JSON.stringify({ ok: false, error: "Faltan campos (name, duration_months, frequency, privacy)" }), {
-                    status: 400, headers: baseHeaders
+            const name = String(body.name || '').trim();
+            const durationMonths = Number(body.duration_months);
+            const frequency = String(body.frequency || '').trim();
+            const privacy = String(body.privacy || '').trim();
+            const targetAmountRaw = body.target_amount ?? body.targetAmount;
+            const targetAmount = Number(targetAmountRaw);
+            const icon = body.icon ? String(body.icon).trim() : null;
+            const currency = body.currency ? String(body.currency).trim().toUpperCase() : 'DOP';
+
+            // Validaciones básicas
+            if (!name || !durationMonths || !frequency || !privacy) {
+                return new Response(JSON.stringify({
+                    ok: false,
+                    error: "Faltan campos (name, duration_months, frequency, privacy)"
+                }), {
+                    status: 400,
+                    headers: baseHeaders
+                });
+            }
+
+            // Validación de target_amount
+            if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+                return new Response(JSON.stringify({
+                    ok: false,
+                    error: "target_amount es obligatorio y debe ser mayor que 0"
+                }), {
+                    status: 400,
+                    headers: baseHeaders
+                });
+            }
+
+            // Validación simple de currency
+            if (!['DOP', 'USD'].includes(currency)) {
+                return new Response(JSON.stringify({
+                    ok: false,
+                    error: "currency debe ser DOP o USD"
+                }), {
+                    status: 400,
+                    headers: baseHeaders
                 });
             }
 
             const goalId = crypto.randomUUID();
 
-            const stmt = env.DB.prepare(
-                "INSERT INTO goals (id, user_id, name, duration_months, frequency, privacy) VALUES (?, ?, ?, ?, ?, ?)"
-            ).bind(goalId, userId, body.name, body.duration_months, body.frequency, body.privacy);
+            const stmt = env.DB.prepare(`
+                INSERT INTO goals
+                (id, user_id, name, duration_months, frequency, privacy, target_amount, icon, currency)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                goalId,
+                userId,
+                name,
+                durationMonths,
+                frequency,
+                privacy,
+                targetAmount,
+                icon,
+                currency
+            );
 
             const result = await stmt.run();
             if (result.error) throw new Error("Db Error");
@@ -72,14 +119,16 @@ export async function handleGoals(request, env) {
                 ok: true,
                 goal: {
                     id: goalId,
-                    name: body.name,
-                    duration_months: body.duration_months,
-                    frequency: body.frequency,
-                    privacy: body.privacy
+                    name,
+                    duration_months: durationMonths,
+                    frequency,
+                    privacy,
+                    target_amount: targetAmount,
+                    icon,
+                    currency
                 }
             }), { status: 201, headers: baseHeaders });
         }
-
 
         // [GET] /api/v1/goals -> LISTAR METAS ACTIVAS DEL USUARIO
         if (method === 'GET' && pathSegments.length === 3) {
@@ -94,7 +143,6 @@ export async function handleGoals(request, env) {
                 goals: results
             }), { status: 200, headers: baseHeaders });
         }
-
 
         // [GET] /api/v1/goals/:id -> LEER UNA META
         if (method === 'GET' && pathSegments.length === 4) {
@@ -111,7 +159,6 @@ export async function handleGoals(request, env) {
 
             return new Response(JSON.stringify({ ok: true, goal }), { status: 200, headers: baseHeaders });
         }
-
 
         // [PATCH] /api/v1/goals/:id/archive -> ARCHIVAR META
         if (method === 'PATCH' && pathSegments.length === 5 && pathSegments[4] === 'archive') {
@@ -138,7 +185,6 @@ export async function handleGoals(request, env) {
             return new Response(JSON.stringify({ ok: true, archived: goalId }), { status: 200, headers: baseHeaders });
         }
 
-
         // [DELETE] /api/v1/goals/:id -> BORRAR UNA META
         if (method === 'DELETE' && pathSegments.length === 4) {
             const goalId = pathSegments[3];
@@ -156,7 +202,6 @@ export async function handleGoals(request, env) {
 
             return new Response(JSON.stringify({ ok: true, deleted: goalId }), { status: 200, headers: baseHeaders });
         }
-
 
         return new Response(JSON.stringify({ error: "Route not found or method unsupported" }), {
             status: 404, headers: baseHeaders
