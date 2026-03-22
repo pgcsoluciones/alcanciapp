@@ -20,6 +20,24 @@ const BADGE_ICON_MAP = {
     recovery: 'badge_saving_sprint.png'
 };
 
+function getUniqueBadgesByCode(badges) {
+    const sorted = [...(Array.isArray(badges) ? badges : [])].sort((a, b) =>
+        String(b?.unlocked_at || '').localeCompare(String(a?.unlocked_at || ''))
+    );
+
+    const seen = new Set();
+    const unique = [];
+
+    for (const badge of sorted) {
+        const code = badge?.badge_code;
+        if (!code || seen.has(code)) continue;
+        seen.add(code);
+        unique.push(badge);
+    }
+
+    return unique;
+}
+
 function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
@@ -108,7 +126,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
     const [transactions, setTransactions] = useState([]);
     const [backendBadges, setBackendBadges] = useState([]);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [verifyPassword, setVerifyPassword] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -139,8 +156,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
             setGoals(goalsData.goals || []);
             setTransactions(txsData.transactions || []);
             setBackendBadges(badgesData.user_badges || []);
-
-            console.log('GOALS RAW', goalsData.goals);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -173,7 +188,9 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
         return acc + (isNaN(pc) ? 0 : pc);
     }, 0);
 
-    const allBadges = validBackendBadges
+    const uniqueBadges = getUniqueBadgesByCode(validBackendBadges);
+
+    const allBadges = uniqueBadges
         .map(b => ({
             ...b,
             icon: BADGE_ICON_MAP[b.badge_code] || 'badge_first_goal.png',
@@ -312,7 +329,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                                 </div>
                                 <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' }}>
                                     {recentBadges.map(b => (
-                                        <div key={b.id} style={{ flexShrink: 0, width: '64px', height: '64px', background: 'white', borderRadius: '50%', border: '2px solid #FEF3C7', padding: '2px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div key={b.badge_code} style={{ flexShrink: 0, width: '64px', height: '64px', background: 'white', borderRadius: '50%', border: '2px solid #FEF3C7', padding: '2px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <img src={ASSET.badge(b.icon)} alt={b.label} style={{ width: '85%', height: '85%', objectFit: 'contain' }} />
                                         </div>
                                     ))}
@@ -339,8 +356,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                             onClick={onGoToCreate}
                             style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '20px', padding: '18px', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '16px', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)', transition: 'transform 0.2s ease' }}
                             onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
-                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                        >
+                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
                             <Plus size={22} />
                             Crear Nueva Meta
                         </button>
@@ -373,8 +389,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                             <button
                                 onClick={handleRequestUnlockCode}
                                 disabled={isVerifying}
-                                style={{ width: '100%', background: '#10B981', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: isVerifying ? 'not-allowed' : 'pointer', boxShadow: '0 8px 16px rgba(16,185,129,0.2)' }}
-                            >
+                                style={{ width: '100%', background: '#10B981', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: isVerifying ? 'not-allowed' : 'pointer', boxShadow: '0 8px 16px rgba(16,185,129,0.2)' }}>
                                 {isVerifying ? 'Enviando...' : 'Enviar Código al Correo'}
                             </button>
                         ) : (
@@ -390,14 +405,12 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                                 <button
                                     onClick={handleVerifyUnlockCode}
                                     disabled={isVerifying || verifyCode.length < 6}
-                                    style={{ width: '100%', background: (isVerifying || verifyCode.length < 6) ? '#9CA3AF' : '#111827', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: (isVerifying || verifyCode.length < 6) ? 'not-allowed' : 'pointer' }}
-                                >
+                                    style={{ width: '100%', background: (isVerifying || verifyCode.length < 6) ? '#9CA3AF' : '#111827', color: 'white', border: 'none', borderRadius: '16px', padding: '16px', fontSize: '15px', fontWeight: '800', cursor: (isVerifying || verifyCode.length < 6) ? 'not-allowed' : 'pointer' }}>
                                     {isVerifying ? 'Verificando...' : 'Confirmar Código'}
                                 </button>
                                 <button
                                     onClick={() => setVerifyingStep('request')}
-                                    style={{ background: 'none', border: 'none', color: '#10B981', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-                                >
+                                    style={{ background: 'none', border: 'none', color: '#10B981', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
                                     Reenviar código
                                 </button>
                             </div>
@@ -405,8 +418,7 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
 
                         <button
                             onClick={() => setShowPasswordModal(false)}
-                            style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', fontWeight: '700', padding: '12px', marginTop: '12px', cursor: 'pointer' }}
-                        >
+                            style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', fontWeight: '700', padding: '12px', marginTop: '12px', cursor: 'pointer' }}>
                             Cancelar
                         </button>
                     </div>
