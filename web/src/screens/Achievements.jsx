@@ -2,21 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Lock } from 'lucide-react';
 import { ASSET } from '../lib/assets';
 import { API_BASE_URL } from '../lib/config';
-import { getProfileAchievements } from '../lib/savingsCalc';
 
-const BADGE_CATALOG = [
-    { code: 'first_goal', name: 'Ahorrador Novato', icon: 'badge_first_goal.png', description: '¡Primer paso dado! Bienvenido a la disciplina.' },
-    { code: 'saving_sprint', name: 'Sprint de Ahorro', icon: 'badge_saving_sprint.png', description: 'Dos aportes en un solo día. ¡Qué energía!' },
-    { code: 'budget_captain', name: 'Capitán del Presupuesto', icon: 'badge_budget_captain.png', description: 'Diste más de lo esperado. ¡Mente de tiburón!' },
-    { code: 'iron_streak', name: 'Disciplina de Hierro', icon: 'badge_iron_streak.png', description: '3 meses consecutivos ahorrando sin falta.' },
-    { code: 'savings_takeoff', name: 'Despegue', icon: 'badge_savings_takeoff.png', description: 'Has completado al menos el 25% de tus metas con objetivo.' },
-    { code: 'vault_premium', name: 'Bóveda Premium', icon: 'badge_vault_premium.png', description: 'Has completado al menos la mitad de tus metas con objetivo.' },
-    { code: 'steady_harvest', name: 'Cosecha Constante', icon: 'badge_steady_harvest.png', description: 'Has completado al menos el 75% de tus metas con objetivo.' },
-    { code: 'grand_cup', name: 'Copa Gran Progreso', icon: 'badge_grand_progress_cup.png', description: 'Has completado todas tus metas con objetivo. Eres un maestro del ahorro.' },
-];
+const BADGE_ICON_MAP = {
+    first_contribution: 'badge_first_goal.png',
+    double_quota: 'badge_budget_captain.png',
+    hitos_25: 'badge_savings_takeoff.png',
+    hitos_50: 'badge_vault_premium.png',
+    hitos_75: 'badge_steady_harvest.png',
+    goal_completed: 'badge_grand_progress_cup.png',
+    constancy_3: 'badge_iron_streak.png',
+    constancy_7: 'badge_iron_streak.png',
+    punctual_5: 'badge_iron_streak.png',
+    racha_10: 'badge_iron_streak.png',
+    recovery: 'badge_saving_sprint.png'
+};
 
 export default function Achievements({ onBack }) {
-    const [catalog] = useState(BADGE_CATALOG);
+    const [catalog, setCatalog] = useState([]);
     const [userBadges, setUserBadges] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -25,34 +27,34 @@ export default function Achievements({ onBack }) {
         const loadBadges = async () => {
             setIsLoading(true);
             setError('');
+
             try {
                 const token = localStorage.getItem('alcanciapp:token');
-                const headers = { Authorization: `Bearer ${token}` };
-
-                const [goalsRes, txsRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/api/v1/goals`, { headers }),
-                    fetch(`${API_BASE_URL}/api/v1/transactions`, { headers })
-                ]);
-
-                const goalsData = await goalsRes.json();
-                const txsData = await txsRes.json();
-
-                if (!goalsRes.ok || !goalsData.ok) {
-                    throw new Error(goalsData.error || 'Error al cargar metas');
-                }
-                if (!txsRes.ok || !txsData.ok) {
-                    throw new Error(txsData.error || 'Error al cargar transacciones');
+                if (!token) {
+                    throw new Error('No se encontró la sesión del usuario');
                 }
 
-                const goals = goalsData.goals || [];
-                const transactions = txsData.transactions || [];
+                const res = await fetch(`${API_BASE_URL}/api/v1/badges`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
 
-                const achievements = getProfileAchievements(goals, transactions) || [];
-                const unlocked = achievements.map(a => ({ badge_code: a.id }));
+                const data = await res.json();
 
-                setUserBadges(unlocked);
+                if (!res.ok || !data.ok) {
+                    throw new Error(data.error || 'Error al cargar insignias');
+                }
+
+                const backendCatalog = (data.badges_catalog || []).map(badge => ({
+                    code: badge.code,
+                    name: badge.name,
+                    description: badge.description || '',
+                    icon: BADGE_ICON_MAP[badge.code] || 'badge_first_goal.png'
+                }));
+
+                setCatalog(backendCatalog);
+                setUserBadges(data.user_badges || []);
             } catch (err) {
-                setError(err.message);
+                setError(err.message || 'Error inesperado al cargar insignias');
             } finally {
                 setIsLoading(false);
             }
