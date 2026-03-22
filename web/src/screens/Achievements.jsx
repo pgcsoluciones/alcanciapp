@@ -3,22 +3,40 @@ import { ArrowLeft, Lock } from 'lucide-react';
 import { ASSET } from '../lib/assets';
 import { API_BASE_URL } from '../lib/config';
 
-const BADGE_ICON_MAP = {
-    first_contribution: 'badge_first_goal.png',
-    double_quota: 'badge_budget_captain.png',
-    hitos_25: 'badge_savings_takeoff.png',
-    hitos_50: 'badge_vault_premium.png',
-    hitos_75: 'badge_steady_harvest.png',
-    goal_completed: 'badge_grand_progress_cup.png',
-    constancy_3: 'badge_iron_streak.png',
-    constancy_7: 'badge_iron_streak.png',
-    punctual_5: 'badge_iron_streak.png',
-    racha_10: 'badge_iron_streak.png',
-    recovery: 'badge_saving_sprint.png'
-};
+const MASTER_BADGE_CATALOG = [
+    { code: 'seed_brave', name: 'Semilla Valiente', description: 'Creaste el inicio de tu camino de ahorro.', icon: 'badge_seed_brave.png' },
+    { code: 'startup_spark', name: 'Chispa Inicial', description: 'Encendiste tu impulso de ahorro.', icon: 'badge_startup_spark.png' },
+    { code: 'first_contribution', name: 'Ahorrador Novato', description: 'Primera transacción válida en cualquier meta.', icon: 'badge_first_goal.png' },
+    { code: 'daily_training', name: 'Entrenamiento Diario', description: 'Mantuviste disciplina diaria de ahorro.', icon: 'badge_daily_training.png' },
+    { code: 'no_excuses', name: 'Sin Excusas', description: 'Seguiste aportando sin perder el enfoque.', icon: 'badge_no_excuses.png' },
+    { code: 'streak_lifeline', name: 'Racha Salvavidas', description: 'Sostuviste una racha importante.', icon: 'badge_streak_lifeline.png' },
+    { code: 'constancy_3', name: 'Constancia de Bronce', description: '3 cuotas cumplidas consecutivamente.', icon: 'badge_iron_streak.png' },
+    { code: 'recovery', name: 'Subiendo de Nivel', description: 'Volviste al ritmo después de un retraso.', icon: 'badge_level_up.png' },
+    { code: 'hitos_25', name: 'Despegue (25%)', description: 'Meta alcanzó el 25% de su objetivo.', icon: 'badge_savings_takeoff.png' },
+    { code: 'goal_completed', name: 'Copa Gran Progreso', description: 'Lograste completar una meta importante.', icon: 'badge_grand_progress_cup.png' },
+    { code: 'saving_champion', name: 'Campeón del Ahorro', description: 'Has demostrado dominio en tus logros.', icon: 'badge_saving_champion.png' },
+    { code: 'hitos_50', name: 'Bóveda (50%)', description: 'Meta alcanzó el 50% de su objetivo.', icon: 'badge_vault_premium.png' },
+    { code: 'punctual_5', name: 'Capitán del Presupuesto', description: '5 aportes consecutivos sin un solo día de atraso.', icon: 'badge_budget_captain.png' },
+    { code: 'entrepreneur_titan', name: 'Titán Emprendedor', description: 'Llevaste tu constancia a un nivel superior.', icon: 'badge_entrepreneur_titan.png' },
+    { code: 'farmer_pro_trophy', name: 'Trofeo Cosecha Pro', description: 'Tu progreso ya se ve como una cosecha sólida.', icon: 'badge_farmer_pro_trophy.png' },
+    { code: 'hitos_75', name: 'Cosecha (75%)', description: 'Meta alcanzó el 75% de su objetivo.', icon: 'badge_steady_harvest.png' },
+    { code: 'double_quota', name: 'Sprint de Ahorro', description: '2 cuotas registradas el mismo día.', icon: 'badge_saving_sprint.png' },
+    { code: 'extreme_race', name: 'Carrera Extrema', description: 'Insignia aspiracional de alto rendimiento.', icon: 'badge_extreme_race.png' },
+    { code: 'extreme_bmx', name: 'BMX Extremo', description: 'Insignia aspiracional de impulso extremo.', icon: 'badge_extreme_bmx.png' },
+    { code: 'extreme_skydiving', name: 'Salto Extremo', description: 'Insignia aspiracional de valentía y ritmo.', icon: 'badge_extreme_skydiving.png' },
+    { code: 'extreme_surf', name: 'Surf Extremo', description: 'Insignia aspiracional de equilibrio y avance.', icon: 'badge_extreme_surf.png' },
+    { code: 'racha_10', name: 'Titán del Ahorro (10)', description: '10 aportes consecutivos sin atraso.', icon: 'badge_extreme_climb.png' }
+];
+
+function getUnlockedCodes(userBadges) {
+    const codes = new Set();
+    for (const badge of Array.isArray(userBadges) ? userBadges : []) {
+        if (badge?.badge_code) codes.add(badge.badge_code);
+    }
+    return codes;
+}
 
 export default function Achievements({ onBack }) {
-    const [catalog, setCatalog] = useState([]);
     const [userBadges, setUserBadges] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -30,9 +48,7 @@ export default function Achievements({ onBack }) {
 
             try {
                 const token = localStorage.getItem('alcanciapp:token');
-                if (!token) {
-                    throw new Error('No se encontró la sesión del usuario');
-                }
+                if (!token) throw new Error('No se encontró la sesión del usuario');
 
                 const res = await fetch(`${API_BASE_URL}/api/v1/badges`, {
                     headers: { Authorization: `Bearer ${token}` }
@@ -44,14 +60,6 @@ export default function Achievements({ onBack }) {
                     throw new Error(data.error || 'Error al cargar insignias');
                 }
 
-                const backendCatalog = (data.badges_catalog || []).map(badge => ({
-                    code: badge.code,
-                    name: badge.name,
-                    description: badge.description || '',
-                    icon: BADGE_ICON_MAP[badge.code] || 'badge_first_goal.png'
-                }));
-
-                setCatalog(backendCatalog);
                 setUserBadges(data.user_badges || []);
             } catch (err) {
                 setError(err.message || 'Error inesperado al cargar insignias');
@@ -63,17 +71,13 @@ export default function Achievements({ onBack }) {
         loadBadges();
     }, []);
 
+    const unlockedCodes = getUnlockedCodes(userBadges);
+    const unlockedCount = MASTER_BADGE_CATALOG.filter(b => unlockedCodes.has(b.code)).length;
+    const totalCount = MASTER_BADGE_CATALOG.length;
+
     if (isLoading) {
         return (
-            <div
-                style={{
-                    minHeight: '100vh',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#6B7280'
-                }}
-            >
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>
                 Cargando tus logros...
             </div>
         );
@@ -106,7 +110,7 @@ export default function Achievements({ onBack }) {
                             Mis Insignias
                         </h1>
                         <p style={{ margin: 0, fontSize: '12px', color: '#6B7280', fontWeight: '600' }}>
-                            Has desbloqueado {userBadges.length} de {catalog.length}
+                            Has desbloqueado {unlockedCount} de {totalCount}
                         </p>
                     </div>
                 </div>
@@ -114,8 +118,8 @@ export default function Achievements({ onBack }) {
                 {error && <div style={{ color: 'red', marginBottom: '16px' }}>{error}</div>}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {catalog.map(badge => {
-                        const isUnlocked = userBadges.some(ub => ub.badge_code === badge.code);
+                    {MASTER_BADGE_CATALOG.map(badge => {
+                        const isUnlocked = unlockedCodes.has(badge.code);
 
                         return (
                             <div
