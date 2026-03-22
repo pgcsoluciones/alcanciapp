@@ -1,36 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Target, Zap, TrendingUp, Award, Menu, Coins, Lock } from 'lucide-react';
+import { Plus, Zap, TrendingUp, Award, Menu, Coins, Lock } from 'lucide-react';
 import GoalCard from '../components/GoalCard';
 import EmptyGoalsState from '../components/EmptyGoalsState';
 import { API_BASE_URL } from '../lib/config';
 import { ASSET } from '../lib/assets';
-import { getSuggestedQuota, getRhythmStatus, getFreqLabel, fmtRD, getPigCoins, getAchievements, fmtPigCoin, getGoalProgress } from '../lib/savingsCalc';
+import { getRhythmStatus, fmtRD, getPigCoins, fmtPigCoin, getGoalProgress } from '../lib/savingsCalc';
 
-// ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
-// ─── Sub-bloque: resumen inteligente del usuario ────────────────────────────
+const BADGE_ICON_MAP = {
+    first_contribution: 'badge_first_goal.png',
+    double_quota: 'badge_budget_captain.png',
+    hitos_25: 'badge_savings_takeoff.png',
+    hitos_50: 'badge_vault_premium.png',
+    hitos_75: 'badge_steady_harvest.png',
+    goal_completed: 'badge_grand_progress_cup.png',
+    constancy_3: 'badge_iron_streak.png',
+    constancy_7: 'badge_iron_streak.png',
+    punctual_5: 'badge_iron_streak.png',
+    racha_10: 'badge_iron_streak.png',
+    recovery: 'badge_saving_sprint.png'
+};
+
 function DashboardInsights({ goals, transactions, onGoToDetail }) {
     if (goals.length === 0) return null;
 
-    // Meta más avanzada (basado en la lógica centralizada de progreso)
     const leaderboardGoals = goals.filter(g => Number(g.target_amount || 0) > 0);
 
-const topGoal = leaderboardGoals.length > 0
-    ? leaderboardGoals.reduce((best, g) => {
-        const p = getGoalProgress(g, transactions.filter(t => t.goal_id === g.id));
-        const bestP = getGoalProgress(best, transactions.filter(t => t.goal_id === best.id));
-        return p > bestP ? g : best;
-    }, leaderboardGoals[0])
-    : null;
+    const topGoal = leaderboardGoals.length > 0
+        ? leaderboardGoals.reduce((best, g) => {
+            const p = getGoalProgress(g, transactions.filter(t => t.goal_id === g.id));
+            const bestP = getGoalProgress(best, transactions.filter(t => t.goal_id === best.id));
+            return p > bestP ? g : best;
+        }, leaderboardGoals[0])
+        : null;
 
-    // Cuota Global en PigCoins (Sumatoria de lo que representa 1 cuota de cada meta activa NO completada)
     const activeChallengeGoals = goals.filter(g => {
         const txs = transactions.filter(t => t.goal_id === g.id);
         const status = getRhythmStatus(g, txs).status;
         return status !== 'completed';
     });
-    const totalNextPigCoins = activeChallengeGoals.length; // 1 PC por cada meta no completada
+    const totalNextPigCoins = activeChallengeGoals.length;
 
-    // Ritmo global
     const rhythms = goals.map(g => getRhythmStatus(g, transactions.filter(t => t.goal_id === g.id)));
     const hasBehind = rhythms.some(r => r.status === 'behind');
     const allNotStarted = rhythms.every(r => r.status === 'not_started' || r.status === 'no_target');
@@ -94,10 +103,10 @@ const topGoal = leaderboardGoals.length > 0
     );
 }
 
-// ─── Dashboard Principal ────────────────────────────────────────────────────
 export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, onGoToDetail, onOpenMenu, onLogout, onNavigate }) {
     const [goals, setGoals] = useState([]);
     const [transactions, setTransactions] = useState([]);
+    const [backendBadges, setBackendBadges] = useState([]);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [verifyPassword, setVerifyPassword] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
@@ -112,19 +121,24 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
         try {
             const token = localStorage.getItem('alcanciapp:token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [goalsRes, txsRes] = await Promise.all([
+
+            const [goalsRes, txsRes, badgesRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/v1/goals`, { headers }),
-                fetch(`${API_BASE_URL}/api/v1/transactions`, { headers })
+                fetch(`${API_BASE_URL}/api/v1/transactions`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/badges`, { headers })
             ]);
 
             const goalsData = await goalsRes.json();
             const txsData = await txsRes.json();
+            const badgesData = await badgesRes.json();
 
             if (!goalsRes.ok || !goalsData.ok) throw new Error(goalsData.error || 'Error en metas');
             if (!txsRes.ok || !txsData.ok) throw new Error(txsData.error || 'Error en transacciones');
+            if (!badgesRes.ok || !badgesData.ok) throw new Error(badgesData.error || 'Error en insignias');
 
             setGoals(goalsData.goals || []);
             setTransactions(txsData.transactions || []);
+            setBackendBadges(badgesData.user_badges || []);
 
             console.log('GOALS RAW', goalsData.goals);
         } catch (err) {
@@ -134,13 +148,13 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
         }
     };
 
-    // Cálculos Gamificados Protegidos
     const validGoals = Array.isArray(goals) ? goals : [];
     const validTransactions = Array.isArray(transactions) ? transactions : [];
+    const validBackendBadges = Array.isArray(backendBadges) ? backendBadges : [];
 
-    // Total ahorrado consolidado (Solo si todas las metas son misma moneda)
     const currencies = [...new Set(validGoals.map(g => g.currency || 'DOP'))];
     const showTotalInUSD = currencies.length === 1 && currencies[0] === 'USD';
+
     const totalSavedAll = validGoals.reduce((acc, g) => {
         const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
         const goalSaved = goalTxs.length > 0
@@ -153,29 +167,24 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
         const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
         const status = getRhythmStatus(g, goalTxs).status;
 
-        // El usuario pide que NO se sigan sumando PigCoins de metas ya completadas al acumulado general
         if (status === 'completed') return acc;
 
         const pc = getPigCoins(g, goalTxs);
         return acc + (isNaN(pc) ? 0 : pc);
     }, 0);
 
-    // Obtener insignias reales
-    const allBadges = [];
-    validGoals.forEach(g => {
-        const goalTxs = validTransactions.filter(t => t && t.goal_id === g.id);
-        const achievements = getAchievements(g, goalTxs);
-        if (Array.isArray(achievements)) {
-            achievements.forEach(a => {
-                if (a && !allBadges.find(b => b.id === a.id)) {
-                    allBadges.push(a);
-                }
-            });
-        }
-    });
-    const recentBadges = [...allBadges].reverse().slice(0, 5);
+    const allBadges = validBackendBadges
+        .map(b => ({
+            ...b,
+            icon: BADGE_ICON_MAP[b.badge_code] || 'badge_first_goal.png',
+            label: b.name || b.badge_code,
+            unlocked_sort: b.unlocked_at || ''
+        }))
+        .sort((a, b) => String(b.unlocked_sort).localeCompare(String(a.unlocked_sort)));
 
-    const [verifyingStep, setVerifyingStep] = useState('request'); // 'request' o 'verify'
+    const recentBadges = allBadges.slice(0, 5);
+
+    const [verifyingStep, setVerifyingStep] = useState('request');
     const [verifyCode, setVerifyCode] = useState('');
     const [verifyError, setVerifyError] = useState('');
 
@@ -228,8 +237,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', padding: '24px 16px', boxSizing: 'border-box' }}>
             <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-
-                {/* Navbar */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '14px 20px', borderRadius: '18px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F3F4F6' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img src={ASSET.logo()} alt="AlcanciApp" style={{ height: '36px' }} />
@@ -253,7 +260,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                     <EmptyGoalsState onCreateClick={onGoToCreate} />
                 ) : (
                     <>
-                        {/* Saludo con Avatar */}
                         <div style={{ marginBottom: '24px', padding: '0 8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <img
                                 src={user && user.avatar ? ASSET.avatar(user.avatar, 128) : ASSET.avatar('1.png', 128)}
@@ -270,7 +276,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                             </div>
                         </div>
 
-                        {/* Balance Global Gamificado */}
                         <div style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', borderRadius: '24px', padding: '26px', color: 'white', marginBottom: '24px', boxShadow: '0 12px 30px rgba(16, 185, 129, 0.25)', position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'relative', zIndex: 1 }}>
                                 <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9, marginBottom: '8px' }}>Tus PigCoins Acumulados</div>
@@ -296,10 +301,8 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                             </div>
                         </div>
 
-                        {/* Resumen Inteligente */}
                         <DashboardInsights goals={validGoals} transactions={validTransactions} onGoToDetail={onGoToDetail} />
 
-                        {/* Insignias Recientes */}
                         {recentBadges.length > 0 && (
                             <div style={{ marginBottom: '24px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 4px' }}>
@@ -320,7 +323,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                             </div>
                         )}
 
-                        {/* Listado de Metas */}
                         <div style={{ marginBottom: '12px', paddingLeft: '4px' }}>
                             <h2 style={{ fontSize: '17px', color: '#111827', fontWeight: '900' }}>Tus Planes</h2>
                         </div>
@@ -333,7 +335,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                             />
                         ))}
 
-                        {/* CTA Nueva Meta */}
                         <button
                             onClick={onGoToCreate}
                             style={{ width: '100%', backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '20px', padding: '18px', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '16px', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)', transition: 'transform 0.2s ease' }}
@@ -347,7 +348,6 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                 )}
             </div>
 
-            {/* Modal de Validación de Seguridad (RE-AUTH) */}
             {showPasswordModal && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                     <div style={{ background: 'white', width: '100%', maxWidth: '340px', borderRadius: '24px', padding: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', fontFamily: 'sans-serif' }}>
