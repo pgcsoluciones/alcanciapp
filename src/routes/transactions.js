@@ -1,6 +1,7 @@
 // src/routes/transactions.js
 import { authenticateUser } from '../lib/auth.js';
 import { getCorsHeaders } from '../lib/cors.js';
+import { evaluateBadgesForContribution } from '../lib/badges.js';
 
 function normalizePathname(pathname) {
     const collapsed = pathname.replace(/\/+/g, '/');
@@ -50,7 +51,17 @@ export async function handleTransactions(request, env) {
                 "INSERT INTO goal_transactions (id, goal_id, user_id, amount) VALUES (?, ?, ?, ?)"
             ).bind(txId, goalId, userId, body.amount).run();
 
-            return new Response(JSON.stringify({ ok: true, transaction: { id: txId, amount: body.amount } }), { status: 201, headers: baseHeaders });
+            const unlockedBadges = await evaluateBadgesForContribution(env, {
+                userId,
+                goalId,
+                amount: body.amount
+            });
+
+            return new Response(JSON.stringify({
+                ok: true,
+                transaction: { id: txId, amount: body.amount },
+                unlocked_badges: unlockedBadges
+            }), { status: 201, headers: baseHeaders });
         }
 
 

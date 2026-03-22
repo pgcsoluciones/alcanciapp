@@ -3,6 +3,7 @@ import { handleAnonymousAuth, handleRequestToken, handleVerifyToken } from './ro
 import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
 import { handleProfile } from './routes/profile.js';
+import { handleBadges } from './routes/badges.js';
 
 function normalizePathname(pathname) {
     const collapsed = pathname.replace(/\/+/g, '/');
@@ -68,6 +69,11 @@ export default {
             // PROFILE
             if (normalizedPath === "/api/v1/profile" || normalizedPath === "/api/v1/profile/verify-password") {
                 return handleProfile(request, env);
+            }
+
+            // BADGES
+            if (normalizedPath === "/api/v1/badges") {
+                return handleBadges(request, env);
             }
 
             // TRANSACTIONS DIRETS
