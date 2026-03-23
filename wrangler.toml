@@ -1,9 +1,13 @@
 name = "alcanciapp-api"
 main = "src/index.js"
 compatibility_date = "2024-02-20"
+keep_vars = true
 
 [vars]
 CORS_ORIGIN = "*"
+EMAIL_PROVIDER = "resend"
+EMAIL_FROM = "AlcanciApp <login@intaprd.com>"
+FROM_EMAIL = "AlcanciApp <login@intaprd.com>"
 
 [[d1_databases]]
 binding = "DB"

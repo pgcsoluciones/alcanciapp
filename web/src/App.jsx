@@ -8,6 +8,7 @@ import { API_BASE_URL } from './lib/config.js'
 import Sidebar from './components/Sidebar'
 import Profile from './screens/Profile'
 import ActiveGoals from './screens/ActiveGoals'
+import ArchivedGoals from './screens/ArchivedGoals'
 import Achievements from './screens/Achievements'
 import GoalLevels from './screens/GoalLevels'
 import Coach from './screens/Coach'
@@ -40,7 +41,7 @@ function App() {
                 setIsUnlocked(false)
                 setUnlockUntil(null)
             }
-        }, 1000);
+        }, 1000)
 
         return () => clearInterval(interval)
     }, [isUnlocked, unlockUntil])
@@ -118,10 +119,10 @@ function App() {
                     onHideAmounts={handleHideAmounts}
                     onOpenMenu={() => setIsSidebarOpen(true)}
                     onLogout={handleLogout}
-		    onNavigate={handleNavigate}
+                    onNavigate={handleNavigate}
                     onGoToCreate={() => handleNavigate('selectGoal')}
                     onGoToDetail={(id) => {
-                        handleNavigate(`detail:${id}`);
+                        handleNavigate(`detail:${id}`)
                     }}
                 />
             ) : currentView === 'selectGoal' ? (
@@ -150,6 +151,11 @@ function App() {
                     onBack={() => handleNavigate('dashboard')}
                     onSelectGoal={(id) => handleNavigate(`detail:${id}`)}
                 />
+            ) : currentView === 'archivedGoals' ? (
+                <ArchivedGoals
+                    onBack={() => handleNavigate('dashboard')}
+                    onSelectGoal={(id) => handleNavigate(`detail:${id}`)}
+                />
             ) : currentView === 'achievements' ? (
                 <Achievements onBack={() => handleNavigate('dashboard')} />
             ) : currentView === 'goalLevels' ? (
@@ -167,4 +173,4 @@ function App() {
     )
 }
 
-export default App;
+export default App

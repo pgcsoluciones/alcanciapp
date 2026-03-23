@@ -1,6 +1,7 @@
 import {
     X, LayoutDashboard, Target, PlusCircle, Award,
-    BarChart3, Users, Trophy, UserCircle, LogOut, HelpCircle, Coins
+    BarChart3, Users, Trophy, UserCircle, LogOut,
+    HelpCircle, Archive
 } from 'lucide-react';
 import { ASSET } from '../lib/assets';
 
@@ -9,6 +10,7 @@ export default function Sidebar({ isOpen, onClose, onNavigate, user, onLogout })
         { id: 'dashboard', label: 'Mi panel', icon: <LayoutDashboard size={20} /> },
         { id: 'registrarAporte', label: 'Registrar aporte', icon: <PlusCircle size={20} /> },
         { id: 'activeGoals', label: 'Mis metas activas', icon: <Target size={20} /> },
+        { id: 'archivedGoals', label: 'Metas archivadas', icon: <Archive size={20} /> },
         { id: 'selectGoal', label: 'Nueva meta', icon: <PlusCircle size={20} /> },
         { id: 'achievements', label: 'Mis logros', icon: <Award size={20} /> },
         { id: 'goalLevels', label: 'Niveles por meta', icon: <BarChart3 size={20} /> },
@@ -104,9 +106,24 @@ export default function Sidebar({ isOpen, onClose, onNavigate, user, onLogout })
                 <div style={headerStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <img src={ASSET.logo()} alt="Logo" style={{ height: '42px', width: 'auto' }} />
-                        <span style={{ fontWeight: '900', fontSize: '22px', color: '#10B981', letterSpacing: '-0.03em' }}>AlcanciApp</span>
+                        <span style={{ fontWeight: '900', fontSize: '22px', color: '#10B981', letterSpacing: '-0.03em' }}>
+                            AlcanciApp
+                        </span>
                     </div>
-                    <button onClick={onClose} style={{ background: '#F9FAFB', border: 'none', borderRadius: '12px', padding: '10px', cursor: 'pointer', color: '#6B7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: '#F9FAFB',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '10px',
+                            cursor: 'pointer',
+                            color: '#6B7280',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
                         <X size={20} />
                     </button>
                 </div>
@@ -118,8 +135,28 @@ export default function Sidebar({ isOpen, onClose, onNavigate, user, onLogout })
                         style={avatarStyle}
                     />
                     <div style={{ overflow: 'hidden' }}>
-                        <div style={{ fontWeight: '800', fontSize: '17px', color: '#111827', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{user?.name || 'Ahorrador'}</div>
-                        <div style={{ fontSize: '12px', color: '#9CA3AF', fontWeight: '500', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{user?.email || 'usuario@ejemplo.com'}</div>
+                        <div
+                            style={{
+                                fontWeight: '800',
+                                fontSize: '17px',
+                                color: '#111827',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis'
+                            }}
+                        >
+                            {user?.name || 'Ahorrador'}
+                        </div>
+                        <div
+                            style={{
+                                fontSize: '12px',
+                                color: '#9CA3AF',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis'
+                            }}
+                        >
+                            {user?.email || 'usuario@ejemplo.com'}
+                        </div>
                     </div>
                 </div>
 
