@@ -46,6 +46,53 @@ function App() {
         return () => clearInterval(interval)
     }, [isUnlocked, unlockUntil])
 
+    // Sincroniza el perfil persistido en backend al cargar la app o al cambiar el token
+    useEffect(() => {
+        if (!token) return
+
+        let cancelled = false
+
+        const syncProfile = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/v1/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+
+                const data = await res.json().catch(() => ({}))
+
+                if (!res.ok || !data.ok) {
+                    const isInvalidSession =
+                        res.status === 401 || data?.error === 'Invalid or expired session'
+
+                    if (!isInvalidSession || cancelled) return
+
+                    localStorage.removeItem('alcanciapp:token')
+                    localStorage.removeItem('alcanciapp:user')
+                    setToken(null)
+                    setUser(null)
+                    setCurrentView('login')
+                    return
+                }
+
+                if (cancelled) return
+
+                const profile = data.profile || null
+                localStorage.setItem('alcanciapp:user', JSON.stringify(profile))
+                setUser(profile)
+            } catch (e) {
+                // Silencioso: no limpiamos sesión por fallos temporales de red
+            }
+        }
+
+        syncProfile()
+
+        return () => {
+            cancelled = true
+        }
+    }, [token])
+
     const handleUnlock = (until) => {
         const unlockDate = until ? new Date(until) : null
         if (!unlockDate || Number.isNaN(unlockDate.getTime()) || unlockDate <= new Date()) {
