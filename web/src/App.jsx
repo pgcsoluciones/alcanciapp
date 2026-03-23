@@ -118,6 +118,7 @@ function App() {
                     onHideAmounts={handleHideAmounts}
                     onOpenMenu={() => setIsSidebarOpen(true)}
                     onLogout={handleLogout}
+		    onNavigate={handleNavigate}
                     onGoToCreate={() => handleNavigate('selectGoal')}
                     onGoToDetail={(id) => {
                         handleNavigate(`detail:${id}`);
