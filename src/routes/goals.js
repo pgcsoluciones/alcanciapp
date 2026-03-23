@@ -5,7 +5,9 @@ import { getCorsHeaders } from '../lib/cors.js';
 async function hasArchivedAtColumn(env) {
     try {
         const columns = await env.DB.prepare("PRAGMA table_info(goals)").all();
-        const rows = Array.isArray(columns?.results) ? columns.results : (Array.isArray(columns) ? columns : []);
+        const rows = Array.isArray(columns?.results)
+            ? columns.results
+            : (Array.isArray(columns) ? columns : []);
         return rows.some((c) => c.name === 'archived_at');
     } catch (e) {
         console.error("Error checking columns:", e);
@@ -28,16 +30,23 @@ async function ensureArchivedAtColumn(env) {
     }
 }
 
+function jsonResponse(payload, status, headers) {
+    return new Response(JSON.stringify(payload), {
+        status,
+        headers: { ...headers, "Content-Type": "application/json" }
+    });
+}
+
 export async function handleGoals(request, env) {
     const corsHeaders = getCorsHeaders(request, env);
 
-    // 1. Aplicar Auth Middleware y recuperar `userId`
     const authResult = await authenticateUser(request, env);
     if (authResult.error) {
-        return new Response(JSON.stringify({ ok: false, error: authResult.error }), {
-            status: authResult.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
+        return jsonResponse(
+            { ok: false, error: authResult.error },
+            authResult.status,
+            corsHeaders
+        );
     }
 
     const { userId } = authResult;
@@ -61,37 +70,37 @@ export async function handleGoals(request, env) {
             const icon = body.icon ? String(body.icon).trim() : null;
             const currency = body.currency ? String(body.currency).trim().toUpperCase() : 'DOP';
 
-            // Validaciones básicas
             if (!name || !durationMonths || !frequency || !privacy) {
-                return new Response(JSON.stringify({
-                    ok: false,
-                    error: "Faltan campos (name, duration_months, frequency, privacy)"
-                }), {
-                    status: 400,
-                    headers: baseHeaders
-                });
+                return jsonResponse(
+                    {
+                        ok: false,
+                        error: "Faltan campos (name, duration_months, frequency, privacy)"
+                    },
+                    400,
+                    baseHeaders
+                );
             }
 
-            // Validación de target_amount
             if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
-                return new Response(JSON.stringify({
-                    ok: false,
-                    error: "target_amount es obligatorio y debe ser mayor que 0"
-                }), {
-                    status: 400,
-                    headers: baseHeaders
-                });
+                return jsonResponse(
+                    {
+                        ok: false,
+                        error: "target_amount es obligatorio y debe ser mayor que 0"
+                    },
+                    400,
+                    baseHeaders
+                );
             }
 
-            // Validación simple de currency
             if (!['DOP', 'USD'].includes(currency)) {
-                return new Response(JSON.stringify({
-                    ok: false,
-                    error: "currency debe ser DOP o USD"
-                }), {
-                    status: 400,
-                    headers: baseHeaders
-                });
+                return jsonResponse(
+                    {
+                        ok: false,
+                        error: "currency debe ser DOP o USD"
+                    },
+                    400,
+                    baseHeaders
+                );
             }
 
             const goalId = crypto.randomUUID();
@@ -115,105 +124,284 @@ export async function handleGoals(request, env) {
             const result = await stmt.run();
             if (result.error) throw new Error("Db Error");
 
-            return new Response(JSON.stringify({
-                ok: true,
-                goal: {
-                    id: goalId,
-                    name,
-                    duration_months: durationMonths,
-                    frequency,
-                    privacy,
-                    target_amount: targetAmount,
-                    icon,
-                    currency
-                }
-            }), { status: 201, headers: baseHeaders });
+            return jsonResponse(
+                {
+                    ok: true,
+                    goal: {
+                        id: goalId,
+                        name,
+                        duration_months: durationMonths,
+                        frequency,
+                        privacy,
+                        target_amount: targetAmount,
+                        icon,
+                        currency,
+                        archived_at: null
+                    }
+                },
+                201,
+                baseHeaders
+            );
         }
 
         // [GET] /api/v1/goals -> LISTAR METAS ACTIVAS DEL USUARIO
         if (method === 'GET' && pathSegments.length === 3) {
             const hasArchived = await hasArchivedAtColumn(env);
+
             const query = hasArchived
-                ? "SELECT * FROM goals WHERE user_id = ? AND archived_at IS NULL ORDER BY created_at DESC"
-                : "SELECT * FROM goals WHERE user_id = ? ORDER BY created_at DESC";
+                ? `
+                    SELECT
+                        g.*,
+                        COALESCE(
+                            (SELECT SUM(t.amount) FROM goal_transactions t WHERE t.goal_id = g.id),
+                            0
+                        ) AS total_saved
+                    FROM goals g
+                    WHERE g.user_id = ?
+                      AND g.archived_at IS NULL
+                    ORDER BY g.created_at DESC
+                `
+                : `
+                    SELECT
+                        g.*,
+                        COALESCE(
+                            (SELECT SUM(t.amount) FROM goal_transactions t WHERE t.goal_id = g.id),
+                            0
+                        ) AS total_saved
+                    FROM goals g
+                    WHERE g.user_id = ?
+                    ORDER BY g.created_at DESC
+                `;
+
             const { results } = await env.DB.prepare(query).bind(userId).all();
 
-            return new Response(JSON.stringify({
-                ok: true,
-                goals: results
-            }), { status: 200, headers: baseHeaders });
+            return jsonResponse(
+                {
+                    ok: true,
+                    goals: results || []
+                },
+                200,
+                baseHeaders
+            );
+        }
+
+        // [GET] /api/v1/goals/archived -> LISTAR METAS ARCHIVADAS
+        // IMPORTANTE: debe ir antes de /api/v1/goals/:id
+        if (method === 'GET' && pathSegments.length === 4 && pathSegments[3] === 'archived') {
+            const hasArchived = await hasArchivedAtColumn(env);
+
+            if (!hasArchived) {
+                return jsonResponse(
+                    { ok: true, goals: [] },
+                    200,
+                    baseHeaders
+                );
+            }
+
+            const { results } = await env.DB.prepare(`
+                SELECT
+                    g.*,
+                    COALESCE(
+                        (SELECT SUM(t.amount) FROM goal_transactions t WHERE t.goal_id = g.id),
+                        0
+                    ) AS total_saved
+                FROM goals g
+                WHERE g.user_id = ?
+                  AND g.archived_at IS NOT NULL
+                ORDER BY g.archived_at DESC, g.created_at DESC
+            `).bind(userId).all();
+
+            return jsonResponse(
+                {
+                    ok: true,
+                    goals: results || []
+                },
+                200,
+                baseHeaders
+            );
         }
 
         // [GET] /api/v1/goals/:id -> LEER UNA META
         if (method === 'GET' && pathSegments.length === 4) {
             const goalId = pathSegments[3];
-            const goal = await env.DB.prepare(
-                "SELECT * FROM goals WHERE id = ? AND user_id = ?"
-            ).bind(goalId, userId).first();
 
-            if (!goal) {
-                return new Response(JSON.stringify({ ok: false, error: "Meta no encontrada o no pertenece al usuario" }), {
-                    status: 404,
-                    headers: baseHeaders
-                });
+            if (goalId === 'archived') {
+                return jsonResponse(
+                    { ok: false, error: "Ruta no válida" },
+                    404,
+                    baseHeaders
+                );
             }
 
-            return new Response(JSON.stringify({ ok: true, goal }), { status: 200, headers: baseHeaders });
+            const goal = await env.DB.prepare(`
+                SELECT
+                    g.*,
+                    COALESCE(
+                        (SELECT SUM(t.amount) FROM goal_transactions t WHERE t.goal_id = g.id),
+                        0
+                    ) AS total_saved
+                FROM goals g
+                WHERE g.id = ?
+                  AND g.user_id = ?
+            `).bind(goalId, userId).first();
+
+            if (!goal) {
+                return jsonResponse(
+                    { ok: false, error: "Meta no encontrada o no pertenece al usuario" },
+                    404,
+                    baseHeaders
+                );
+            }
+
+            return jsonResponse(
+                { ok: true, goal },
+                200,
+                baseHeaders
+            );
         }
 
-        // [PATCH] /api/v1/goals/:id/archive -> ARCHIVAR META
+        // [PATCH] /api/v1/goals/:id/archive -> ARCHIVAR META COMPLETADA
         if (method === 'PATCH' && pathSegments.length === 5 && pathSegments[4] === 'archive') {
             const goalId = pathSegments[3];
             const hasArchived = await ensureArchivedAtColumn(env);
+
             if (!hasArchived) {
-                return new Response(JSON.stringify({ ok: false, error: "No se pudo preparar archivado (archived_at)" }), {
-                    status: 500,
-                    headers: baseHeaders
-                });
+                return jsonResponse(
+                    { ok: false, error: "No se pudo preparar archivado (archived_at)" },
+                    500,
+                    baseHeaders
+                );
             }
 
-            const result = await env.DB.prepare(
-                "UPDATE goals SET archived_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND archived_at IS NULL"
-            ).bind(goalId, userId).run();
+            const goal = await env.DB.prepare(`
+                SELECT
+                    g.*,
+                    COALESCE(
+                        (SELECT SUM(t.amount) FROM goal_transactions t WHERE t.goal_id = g.id),
+                        0
+                    ) AS total_saved
+                FROM goals g
+                WHERE g.id = ?
+                  AND g.user_id = ?
+            `).bind(goalId, userId).first();
+
+            if (!goal) {
+                return jsonResponse(
+                    { ok: false, error: "Meta no encontrada" },
+                    404,
+                    baseHeaders
+                );
+            }
+
+            if (goal.archived_at) {
+                return jsonResponse(
+                    { ok: false, error: "La meta ya está archivada" },
+                    409,
+                    baseHeaders
+                );
+            }
+
+            const targetAmount = Number(goal.target_amount || 0);
+            const totalSaved = Number(goal.total_saved || 0);
+
+            if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+                return jsonResponse(
+                    { ok: false, error: "Solo se pueden archivar metas completadas con objetivo válido" },
+                    400,
+                    baseHeaders
+                );
+            }
+
+            if (totalSaved < targetAmount) {
+                return jsonResponse(
+                    { ok: false, error: "Solo se pueden archivar metas ya completadas" },
+                    400,
+                    baseHeaders
+                );
+            }
+
+            const result = await env.DB.prepare(`
+                UPDATE goals
+                SET archived_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                  AND user_id = ?
+                  AND archived_at IS NULL
+            `).bind(goalId, userId).run();
 
             if ((result?.meta?.changes || 0) < 1) {
-                return new Response(JSON.stringify({ ok: false, error: "No encontrada o ya archivada" }), {
-                    status: 404,
-                    headers: baseHeaders
-                });
+                return jsonResponse(
+                    { ok: false, error: "No encontrada o ya archivada" },
+                    404,
+                    baseHeaders
+                );
             }
 
-            return new Response(JSON.stringify({ ok: true, archived: goalId }), { status: 200, headers: baseHeaders });
+            const archivedGoal = await env.DB.prepare(`
+                SELECT
+                    g.*,
+                    COALESCE(
+                        (SELECT SUM(t.amount) FROM goal_transactions t WHERE t.goal_id = g.id),
+                        0
+                    ) AS total_saved
+                FROM goals g
+                WHERE g.id = ?
+                  AND g.user_id = ?
+            `).bind(goalId, userId).first();
+
+            return jsonResponse(
+                {
+                    ok: true,
+                    archived: goalId,
+                    goal: archivedGoal || null
+                },
+                200,
+                baseHeaders
+            );
         }
 
         // [DELETE] /api/v1/goals/:id -> BORRAR UNA META
         if (method === 'DELETE' && pathSegments.length === 4) {
             const goalId = pathSegments[3];
 
-            // Se valida obligatoriamente con el user_id para no borrar otras metas
+            if (goalId === 'archived') {
+                return jsonResponse(
+                    { ok: false, error: "Ruta no válida" },
+                    404,
+                    baseHeaders
+                );
+            }
+
             const result = await env.DB.prepare(
                 "DELETE FROM goals WHERE id = ? AND user_id = ?"
             ).bind(goalId, userId).run();
 
             if (result.meta && result.meta.changes === 0) {
-                return new Response(JSON.stringify({ ok: false, error: "No encontrada" }), {
-                    status: 404,
-                    headers: baseHeaders
-                });
+                return jsonResponse(
+                    { ok: false, error: "No encontrada" },
+                    404,
+                    baseHeaders
+                );
             }
 
-            return new Response(JSON.stringify({ ok: true, deleted: goalId }), { status: 200, headers: baseHeaders });
+            return jsonResponse(
+                { ok: true, deleted: goalId },
+                200,
+                baseHeaders
+            );
         }
 
-        return new Response(JSON.stringify({ error: "Route not found or method unsupported" }), {
-            status: 404,
-            headers: baseHeaders
-        });
+        return jsonResponse(
+            { error: "Route not found or method unsupported" },
+            404,
+            baseHeaders
+        );
 
     } catch (e) {
-        return new Response(JSON.stringify({ ok: false, error: e.message }), {
-            status: 500,
-            headers: baseHeaders
-        });
+        console.error("handleGoals error:", e);
+        return jsonResponse(
+            { ok: false, error: e.message },
+            500,
+            baseHeaders
+        );
     }
 }
