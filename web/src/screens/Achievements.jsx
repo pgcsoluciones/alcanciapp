@@ -36,6 +36,24 @@ function getUnlockedCodes(userBadges) {
     return codes;
 }
 
+function getLatestUnlockedMap(userBadges) {
+    const latestMap = new Map();
+
+    for (const badge of Array.isArray(userBadges) ? userBadges : []) {
+        if (!badge?.badge_code) continue;
+
+        const currentTime = new Date(badge.unlocked_at || 0).getTime();
+        const existing = latestMap.get(badge.badge_code);
+        const existingTime = existing ? new Date(existing.unlocked_at || 0).getTime() : 0;
+
+        if (!existing || currentTime > existingTime) {
+            latestMap.set(badge.badge_code, badge);
+        }
+    }
+
+    return latestMap;
+}
+
 export default function Achievements({ onBack }) {
     const [userBadges, setUserBadges] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -72,6 +90,24 @@ export default function Achievements({ onBack }) {
     }, []);
 
     const unlockedCodes = getUnlockedCodes(userBadges);
+    const latestUnlockedMap = getLatestUnlockedMap(userBadges);
+
+    const sortedBadges = [...MASTER_BADGE_CATALOG].sort((a, b) => {
+        const aUnlocked = unlockedCodes.has(a.code);
+        const bUnlocked = unlockedCodes.has(b.code);
+
+        if (aUnlocked && !bUnlocked) return -1;
+        if (!aUnlocked && bUnlocked) return 1;
+
+        if (aUnlocked && bUnlocked) {
+            const aTime = new Date(latestUnlockedMap.get(a.code)?.unlocked_at || 0).getTime();
+            const bTime = new Date(latestUnlockedMap.get(b.code)?.unlocked_at || 0).getTime();
+            return bTime - aTime;
+        }
+
+        return 0;
+    });
+
     const unlockedCount = MASTER_BADGE_CATALOG.filter(b => unlockedCodes.has(b.code)).length;
     const totalCount = MASTER_BADGE_CATALOG.length;
 
@@ -118,7 +154,7 @@ export default function Achievements({ onBack }) {
                 {error && <div style={{ color: 'red', marginBottom: '16px' }}>{error}</div>}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {MASTER_BADGE_CATALOG.map(badge => {
+                    {sortedBadges.map(badge => {
                         const isUnlocked = unlockedCodes.has(badge.code);
 
                         return (
