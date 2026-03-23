@@ -278,11 +278,33 @@ export default function Dashboard({ user, isUnlocked, onUnlock, onGoToCreate, on
                 ) : (
                     <>
                         <div style={{ marginBottom: '24px', padding: '0 8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <img
-                                src={user && user.avatar ? ASSET.avatar(user.avatar, 128) : ASSET.avatar('1.png', 128)}
-                                alt="Avatar"
-                                style={{ width: '68px', height: '68px', borderRadius: '50%', border: '3px solid #10B981', padding: '4px', backgroundColor: 'white', flexShrink: 0, boxShadow: '0 4px 12px rgba(16,185,129,0.1)' }}
-                            />
+                            <button
+                                onClick={() => onNavigate('profile')}
+                                type="button"
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: 0,
+                                    margin: 0,
+                                    cursor: 'pointer',
+                                    borderRadius: '50%',
+                                    flexShrink: 0
+                                }}
+                            >
+                                <img
+                                    src={user && user.avatar ? ASSET.avatar(user.avatar, 128) : ASSET.avatar('1.png', 128)}
+                                    alt="Avatar"
+                                    style={{
+                                        width: '68px',
+                                        height: '68px',
+                                        borderRadius: '50%',
+                                        border: '3px solid #10B981',
+                                        padding: '4px',
+                                        backgroundColor: 'white',
+                                        boxShadow: '0 4px 12px rgba(16,185,129,0.1)'
+                                    }}
+                                />
+                            </button>
                             <div>
                                 <div style={{ fontSize: '24px', fontWeight: '900', color: '#111827', letterSpacing: '-0.03em' }}>
                                     ¡Hola, {user?.name || 'Ahorrador'}! 👋
