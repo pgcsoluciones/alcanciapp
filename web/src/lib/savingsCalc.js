@@ -64,58 +64,102 @@ export function getPigCoinProgress(goal, transactions) {
 
 /**
  * Calcula el tiempo restante y devuelve un objeto de estado contextual.
+ * Basado en el calendario real de la meta, no en el último aporte.
  * @param {Object} goal
  * @param {Array} transactions
  * @returns {{ label: string, totalSeconds: number, status: string }}
  */
 export function getCountdownStatus(goal, transactions) {
-    if (!goal.created_at) return { label: 'Iniciando...', totalSeconds: 0, status: 'idle' };
+    if (!goal?.created_at) {
+        return { label: 'Iniciando...', totalSeconds: 0, status: 'idle' };
+    }
 
     const rhythm = getRhythmStatus(goal, transactions);
+
     if (rhythm.status === 'completed') {
         return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
     }
 
     if (rhythm.status === 'no_target') {
-        return { label: 'Ahorro Libre — Suma a tu propio ritmo 🐷', totalSeconds: 0, status: 'idle' };
+        return { label: 'Ahorro libre — suma a tu propio ritmo 🐷', totalSeconds: 0, status: 'idle' };
     }
 
-    if (rhythm.status === 'ahead') {
-        return { label: 'Vas adelantado. Ya sumaste tu próximo PigCoin antes de tiempo.', totalSeconds: 0, status: 'ahead' };
-    }
-
-    // Base: Último aporte o fecha de creación
-    let baseDate = new Date(goal.created_at);
-    if (transactions && transactions.length > 0) {
-        const sorted = [...transactions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        baseDate = new Date(sorted[0].created_at);
+    const start = new Date(goal.created_at);
+    if (Number.isNaN(start.getTime())) {
+        return { label: 'Iniciando...', totalSeconds: 0, status: 'idle' };
     }
 
     const freq = (goal.frequency || 'Mensual').toLowerCase();
-    let intervalDays = 30;
-    if (freq.includes('semanal')) intervalDays = 7;
-    if (freq.includes('quincenal')) intervalDays = 15;
-    if (freq.includes('diario')) intervalDays = 1;
 
-    const nextAporteDate = new Date(baseDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
-    const now = new Date();
-    const diffMs = nextAporteDate - now;
+    let msInPeriod = 30.42 * 24 * 60 * 60 * 1000;
+    if (freq.includes('quincenal')) msInPeriod = 15.21 * 24 * 60 * 60 * 1000;
+    if (freq.includes('semanal')) msInPeriod = 7 * 24 * 60 * 60 * 1000;
+    if (freq.includes('diario')) msInPeriod = 1 * 24 * 60 * 60 * 1000;
 
-    if (diffMs <= 0) {
-        if (rhythm.status === 'behind') {
-            return { label: '¡Oportunidad vencida! Haz un aporte para recuperarte.', totalSeconds: 0, status: 'behind' };
-        }
-        return { label: `Hoy toca sumar tu PigCoin de la ${getFreqLabel(goal.frequency)}.`, totalSeconds: 0, status: 'due' };
+    const totalPeriods = getPeriodsTotal(goal);
+    const periodsCompleted = getPeriodsCompleted(goal, transactions);
+    const periodsElapsed = getPeriodsElapsed(goal);
+
+    if (totalPeriods > 0 && periodsCompleted >= totalPeriods) {
+        return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
     }
 
-    const totalSeconds = Math.floor(diffMs / 1000);
+    // La próxima cuota esperada es la siguiente que aún no se ha completado
+    const nextDuePeriod = periodsCompleted + 1;
+
+    if (totalPeriods > 0 && nextDuePeriod > totalPeriods) {
+        return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
+    }
+
+    const nextDueDate = new Date(start.getTime() + nextDuePeriod * msInPeriod);
+    const now = new Date();
+    const diffMs = nextDueDate.getTime() - now.getTime();
+
+    const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
     const d = Math.floor(totalSeconds / (24 * 3600));
     const h = Math.floor((totalSeconds % (24 * 3600)) / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
 
-    const timeStr = d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`;
+    const futureTimeStr = d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`;
+
+    const overdueSeconds = Math.max(0, Math.floor(Math.abs(diffMs) / 1000));
+    const od = Math.floor(overdueSeconds / (24 * 3600));
+    const oh = Math.floor((overdueSeconds % (24 * 3600)) / 3600);
+    const om = Math.floor((overdueSeconds % 3600) / 60);
+
+    const overdueTimeStr = od > 0 ? `${od}d ${oh}h` : `${oh}h ${om}m`;
+
+    const isSameDay =
+        nextDueDate.getFullYear() === now.getFullYear() &&
+        nextDueDate.getMonth() === now.getMonth() &&
+        nextDueDate.getDate() === now.getDate();
+
+    if (periodsCompleted < periodsElapsed) {
+        return {
+            label: `Atrasada: tu aporte ${getFreqLabel(goal.frequency)} va vencido por ${overdueTimeStr}`,
+            totalSeconds: 0,
+            status: 'behind'
+        };
+    }
+
+    if (isSameDay || diffMs <= 0) {
+        return {
+            label: `Hoy toca tu próximo aporte ${getFreqLabel(goal.frequency)}`,
+            totalSeconds: 0,
+            status: 'due'
+        };
+    }
+
+    if (rhythm.status === 'ahead') {
+        return {
+            label: `Vas adelantado. Tu próximo aporte vence en ${futureTimeStr}`,
+            totalSeconds,
+            status: 'on_track'
+        };
+    }
+
     return {
-        label: `Tu próxima oportunidad de sumar 1 PigCoin vence en ${timeStr}`,
+        label: `Tu próximo aporte vence en ${futureTimeStr}`,
         totalSeconds,
         status: 'on_track'
     };
