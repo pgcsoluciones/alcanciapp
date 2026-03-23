@@ -11,7 +11,6 @@ import {
     getPeriodsCompleted,
     getRhythmStatus,
     getStreakMonths,
-    getAchievements,
     getMotivationalMessage,
     getPigCoins,
     getPigCoinProgress,
@@ -63,6 +62,7 @@ function BadgeItem({ label, icon }) {
 export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts, onBack }) {
     const [goal, setGoal] = useState(null);
     const [transactions, setTransactions] = useState([]);
+    const [goalBadges, setGoalBadges] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -87,16 +87,30 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
         try {
             const token = localStorage.getItem('alcanciapp:token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            const [goalRes, txRes] = await Promise.all([
+            const [goalRes, txRes, badgesRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/v1/goals/${goalId}`, { headers }),
-                fetch(`${API_BASE_URL}/api/v1/goals/${goalId}/transactions`, { headers })
+                fetch(`${API_BASE_URL}/api/v1/goals/${goalId}/transactions`, { headers }),
+                fetch(`${API_BASE_URL}/api/v1/badges`, { headers })
             ]);
+
             const goalData = await goalRes.json();
             const txData = await txRes.json();
+            const badgesData = await badgesRes.json();
+
             if (!goalRes.ok || !goalData.ok) throw new Error(goalData.error || 'Error al cargar meta');
             if (!txRes.ok || !txData.ok) throw new Error(txData.error || 'Error al cargar historial');
+            if (!badgesRes.ok || !badgesData.ok) throw new Error(badgesData.error || 'Error al cargar insignias');
+
             setGoal(goalData.goal);
             setTransactions(txData.transactions || []);
+
+            const filteredGoalBadges = Array.isArray(badgesData.user_badges)
+                ? badgesData.user_badges
+                    .filter((badge) => String(badge.goal_id || '') === String(goalId))
+                    .sort((a, b) => new Date(b.unlocked_at || 0) - new Date(a.unlocked_at || 0))
+                : [];
+
+            setGoalBadges(filteredGoalBadges);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -170,7 +184,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
     const quota = getSuggestedQuota(goal);
     const rhythm = getRhythmStatus(goal, currentTransactions);
     const streak = getStreakMonths(currentTransactions);
-    const achievements = getAchievements(goal, currentTransactions);
+    const achievements = goalBadges;
     const motivationalMsg = getMotivationalMessage(goal, currentTransactions);
     const pigCoins = getPigCoins(goal, currentTransactions);
     const pigProg = getPigCoinProgress(goal, currentTransactions);
@@ -379,8 +393,12 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Logros Ganados</h3>
                         </div>
                         <div style={{ display: 'flex', overflowX: 'auto', gap: '16px', paddingBottom: '8px' }}>
-                            {achievements.map(a => (
-                                <BadgeItem key={a.id} label={a.label} icon={a.icon} />
+                            {achievements.map((a, index) => (
+                                <BadgeItem
+                                    key={`${a.badge_code}-${a.goal_id || 'global'}-${a.unlocked_at || index}`}
+                                    label={a.name || a.badge_code}
+                                    icon={a.icon || a.badge_code}
+                                />
                             ))}
                         </div>
                     </div>
