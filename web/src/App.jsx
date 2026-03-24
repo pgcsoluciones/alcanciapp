@@ -38,6 +38,14 @@ function App() {
     // Estado de la meta guardada (leída de localStorage)
     const [savedGoal, setSavedGoal] = useState(null)
 
+    // Activa/desactiva el canvas visual de Super Admin
+    useEffect(() => {
+        document.body.classList.toggle('superadmin-mode', isSuperAdminMode)
+        return () => {
+            document.body.classList.remove('superadmin-mode')
+        }
+    }, [isSuperAdminMode])
+
     // Timer para reset de privacidad
     useEffect(() => {
         if (!isUnlocked || !unlockUntil) return
@@ -201,7 +209,11 @@ function App() {
             )
         }
 
-        return <SuperAdminDashboard token={token} onLogout={handleLogout} />
+        return (
+            <div className="superadmin-app-shell">
+                <SuperAdminDashboard token={token} onLogout={handleLogout} />
+            </div>
+        )
     }
 
     return (

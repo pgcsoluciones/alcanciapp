@@ -40,3 +40,24 @@
 .read-the-docs {
   color: #888;
 }
+
+/* ===== Super Admin desktop canvas ===== */
+body.superadmin-mode {
+  margin: 0;
+  background: #f5f7fb;
+}
+
+body.superadmin-mode #root {
+  width: 100vw;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: initial !important;
+}
+
+body.superadmin-mode .superadmin-app-shell {
+  width: 100vw;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
