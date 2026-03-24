@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import SelectGoal from './screens/SelectGoal'
 import Login from './screens/Login'
 import Register from './screens/Register'
@@ -13,11 +13,17 @@ import Achievements from './screens/Achievements'
 import GoalLevels from './screens/GoalLevels'
 import Coach from './screens/Coach'
 import ChallengesCircles from './screens/ChallengesCircles'
+import SuperAdminDashboard from './screens/SuperAdminDashboard.jsx'
 
 function App() {
     const [apiStatus, setApiStatus] = useState('Conectando...')
     const [token, setToken] = useState(localStorage.getItem('alcanciapp:token') || null)
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('alcanciapp:user') || 'null'))
+
+    const isSuperAdminMode = useMemo(() => {
+        const params = new URLSearchParams(window.location.search)
+        return params.get('superadmin') === '1'
+    }, [])
 
     // Estado del menú lateral
     const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -123,6 +129,12 @@ function App() {
         localStorage.removeItem('alcanciapp:user')
         setToken(null)
         setUser(null)
+
+        if (isSuperAdminMode) {
+            window.location.href = window.location.pathname
+            return
+        }
+
         setCurrentView('login')
     }
 
@@ -134,6 +146,62 @@ function App() {
     const handleNavigate = (view) => {
         setCurrentView(view)
         window.scrollTo(0, 0)
+    }
+
+    if (isSuperAdminMode) {
+        if (!token) {
+            return (
+                <div
+                    style={{
+                        minHeight: '100vh',
+                        display: 'grid',
+                        placeItems: 'center',
+                        background: '#f5f7fb',
+                        padding: 24,
+                        fontFamily: 'sans-serif'
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '100%',
+                            maxWidth: 520,
+                            background: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 18,
+                            padding: 24,
+                            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+                        }}
+                    >
+                        <div style={{ fontSize: 28, fontWeight: 800, color: '#14213d' }}>
+                            Super Admin
+                        </div>
+                        <div style={{ color: '#6b7280', marginTop: 8, lineHeight: 1.5 }}>
+                            Primero inicia sesión en la app con un usuario que tenga rol administrativo
+                            y luego vuelve a abrir esta vista con <strong>?superadmin=1</strong>.
+                        </div>
+                        <button
+                            onClick={() => {
+                                window.location.href = window.location.pathname
+                            }}
+                            style={{
+                                marginTop: 18,
+                                border: 'none',
+                                borderRadius: 12,
+                                padding: '12px 16px',
+                                background: '#14213d',
+                                color: '#ffffff',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Ir a la app normal
+                        </button>
+                    </div>
+                </div>
+            )
+        }
+
+        return <SuperAdminDashboard token={token} onLogout={handleLogout} />
     }
 
     return (

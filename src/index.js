@@ -4,6 +4,7 @@ import { handleGoals } from './routes/goals.js';
 import { handleTransactions } from './routes/transactions.js';
 import { handleProfile } from './routes/profile.js';
 import { handleBadges } from './routes/badges.js';
+import { handleSuperAdmin } from './routes/superadmin.js';
 
 function normalizePathname(pathname) {
     const collapsed = pathname.replace(/\/+/g, '/');
@@ -12,7 +13,6 @@ function normalizePathname(pathname) {
 
 export default {
     async fetch(request, env, ctx) {
-        // Manejar CORS Preflight Global
         const corsResponse = handleOptions(request, env);
         if (corsResponse) return corsResponse;
 
@@ -24,9 +24,6 @@ export default {
         const baseHeaders = { ...getCorsHeaders(request, env), "Content-Type": "application/json" };
 
         try {
-            // ==========================================
-            // BACKWARD COMPATIBILITY
-            // ==========================================
             if (normalizedPath === "/" && method === "GET") {
                 return new Response("AlcanciApp API is running", {
                     headers: { ...getCorsHeaders(request, env), "Content-Type": "text/plain" }
@@ -39,9 +36,10 @@ export default {
                 });
             }
 
-            // ==========================================
-            // MODULE ROUTES
-            // ==========================================
+            // SUPER ADMIN
+            if (normalizedPath.startsWith("/api/v1/superadmin")) {
+                return handleSuperAdmin(request, env);
+            }
 
             // AUTHENTICATION
             if (normalizedPath === "/api/v1/auth/anonymous") {
@@ -58,8 +56,6 @@ export default {
 
             // GOALS
             if (normalizedPath.startsWith("/api/v1/goals")) {
-                // Delegamos /api/v1/goals... a su handler
-                // Transacciones atadas a goals: POST /api/v1/goals/:id/transactions
                 if (normalizedPath.includes("/transactions")) {
                     return handleTransactions(request, env);
                 }
@@ -76,12 +72,11 @@ export default {
                 return handleBadges(request, env);
             }
 
-            // TRANSACTIONS DIRETS
+            // TRANSACTIONS
             if (normalizedPath === "/api/v1/transactions" || normalizedPath.startsWith("/api/v1/transactions/")) {
                 return handleTransactions(request, env);
             }
 
-            // Fallback not found
             return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: baseHeaders });
 
         } catch (e) {
