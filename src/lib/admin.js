@@ -1,9 +1,13 @@
 import { authenticateUser } from './auth.js';
+import { getCorsHeaders } from './cors.js';
 
-function json(data, status = 200) {
+function json(request, env, data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      ...getCorsHeaders(request, env),
+      'Content-Type': 'application/json',
+    },
   });
 }
 
@@ -13,7 +17,7 @@ export async function authenticateAdmin(request, env, allowedRoles = []) {
   if (!auth || auth.error || !auth.userId) {
     return {
       ok: false,
-      response: json({ error: auth?.error || 'Unauthorized' }, auth?.status || 401),
+      response: json(request, env, { error: auth?.error || 'Unauthorized' }, auth?.status || 401),
     };
   }
 
@@ -25,15 +29,24 @@ export async function authenticateAdmin(request, env, allowedRoles = []) {
   `).bind(auth.userId).first();
 
   if (!admin) {
-    return { ok: false, response: json({ error: 'Admin access required' }, 403) };
+    return {
+      ok: false,
+      response: json(request, env, { error: 'Admin access required' }, 403),
+    };
   }
 
   if (admin.status !== 'active') {
-    return { ok: false, response: json({ error: 'Admin inactive' }, 403) };
+    return {
+      ok: false,
+      response: json(request, env, { error: 'Admin inactive' }, 403),
+    };
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(admin.role)) {
-    return { ok: false, response: json({ error: 'Insufficient role' }, 403) };
+    return {
+      ok: false,
+      response: json(request, env, { error: 'Insufficient role' }, 403),
+    };
   }
 
   return {
@@ -70,6 +83,6 @@ export async function writeAdminAudit(env, {
   return auditId;
 }
 
-export function adminJson(data, status = 200) {
-  return json(data, status);
+export function adminJson(request, env, data, status = 200) {
+  return json(request, env, data, status);
 }
