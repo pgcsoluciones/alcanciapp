@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import SelectGoal from './screens/SelectGoal'
 import Login from './screens/Login'
 import Register from './screens/Register'
@@ -16,7 +17,6 @@ import ChallengesCircles from './screens/ChallengesCircles'
 import SuperAdminDashboard from './screens/SuperAdminDashboard.jsx'
 
 function App() {
-    const [apiStatus, setApiStatus] = useState('Conectando...')
     const [token, setToken] = useState(localStorage.getItem('alcanciapp:token') || null)
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('alcanciapp:user') || 'null'))
 
@@ -25,20 +25,11 @@ function App() {
         return params.get('superadmin') === '1'
     }, [])
 
-    // Estado del menú lateral
     const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-
-    // Vista actual
     const [currentView, setCurrentView] = useState(!token ? 'login' : 'dashboard')
-
-    // Privacidad (Modo Real) - 5 minutos
     const [isUnlocked, setIsUnlocked] = useState(false)
     const [unlockUntil, setUnlockUntil] = useState(null)
 
-    // Estado de la meta guardada (leída de localStorage)
-    const [savedGoal, setSavedGoal] = useState(null)
-
-    // Activa/desactiva el canvas visual de Super Admin
     useEffect(() => {
         document.body.classList.toggle('superadmin-mode', isSuperAdminMode)
         return () => {
@@ -46,7 +37,6 @@ function App() {
         }
     }, [isSuperAdminMode])
 
-    // Timer para reset de privacidad
     useEffect(() => {
         if (!isUnlocked || !unlockUntil) return
 
@@ -60,7 +50,6 @@ function App() {
         return () => clearInterval(interval)
     }, [isUnlocked, unlockUntil])
 
-    // Sincroniza el perfil persistido en backend al cargar la app o al cambiar el token
     useEffect(() => {
         if (!token) return
 
@@ -96,7 +85,7 @@ function App() {
                 localStorage.setItem('alcanciapp:user', JSON.stringify(profile))
                 setUser(profile)
             } catch (e) {
-                // Silencioso: no limpiamos sesión por fallos temporales de red
+                // no-op
             }
         }
 
@@ -157,63 +146,70 @@ function App() {
     }
 
     if (isSuperAdminMode) {
-        if (!token) {
-            return (
+        const superAdminNode = !token ? (
+            <div
+                style={{
+                    minHeight: '100vh',
+                    width: '100vw',
+                    display: 'grid',
+                    placeItems: 'center',
+                    background: '#f5f7fb',
+                    padding: 24,
+                    fontFamily: 'sans-serif'
+                }}
+            >
                 <div
                     style={{
-                        minHeight: '100vh',
-                        display: 'grid',
-                        placeItems: 'center',
-                        background: '#f5f7fb',
+                        width: '100%',
+                        maxWidth: 520,
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 18,
                         padding: 24,
-                        fontFamily: 'sans-serif'
+                        boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
                     }}
                 >
-                    <div
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#14213d' }}>
+                        Super Admin
+                    </div>
+                    <div style={{ color: '#6b7280', marginTop: 8, lineHeight: 1.5 }}>
+                        Primero inicia sesión en la app con un usuario que tenga rol administrativo
+                        y luego vuelve a abrir esta vista con <strong>?superadmin=1</strong>.
+                    </div>
+                    <button
+                        onClick={() => {
+                            window.location.href = window.location.pathname
+                        }}
                         style={{
-                            width: '100%',
-                            maxWidth: 520,
-                            background: '#ffffff',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: 18,
-                            padding: 24,
-                            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+                            marginTop: 18,
+                            border: 'none',
+                            borderRadius: 12,
+                            padding: '12px 16px',
+                            background: '#14213d',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            cursor: 'pointer',
                         }}
                     >
-                        <div style={{ fontSize: 28, fontWeight: 800, color: '#14213d' }}>
-                            Super Admin
-                        </div>
-                        <div style={{ color: '#6b7280', marginTop: 8, lineHeight: 1.5 }}>
-                            Primero inicia sesión en la app con un usuario que tenga rol administrativo
-                            y luego vuelve a abrir esta vista con <strong>?superadmin=1</strong>.
-                        </div>
-                        <button
-                            onClick={() => {
-                                window.location.href = window.location.pathname
-                            }}
-                            style={{
-                                marginTop: 18,
-                                border: 'none',
-                                borderRadius: 12,
-                                padding: '12px 16px',
-                                background: '#14213d',
-                                color: '#ffffff',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                            }}
-                        >
-                            Ir a la app normal
-                        </button>
-                    </div>
+                        Ir a la app normal
+                    </button>
                 </div>
-            )
-        }
-
-        return (
-            <div className="superadmin-app-shell">
+            </div>
+        ) : (
+            <div
+                className="superadmin-app-shell"
+                style={{
+                    width: '100vw',
+                    minHeight: '100vh',
+                    margin: 0,
+                    padding: 0
+                }}
+            >
                 <SuperAdminDashboard token={token} onLogout={handleLogout} />
             </div>
         )
+
+        return createPortal(superAdminNode, document.body)
     }
 
     return (
@@ -255,7 +251,7 @@ function App() {
             ) : currentView === 'selectGoal' ? (
                 <SelectGoal
                     onBack={() => handleNavigate('dashboard')}
-                    onGoalCreated={(goalData) => {
+                    onGoalCreated={() => {
                         handleNavigate('dashboard')
                     }}
                 />
