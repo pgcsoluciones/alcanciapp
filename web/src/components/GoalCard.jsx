@@ -53,7 +53,11 @@ export default function GoalCard({ goal, isUnlocked, onClick }) {
             {countdown.status !== 'idle' && (
                 <div style={{ position: 'absolute', top: 0, right: 0, background: countdown.status === 'on_track' ? '#10B981' : '#F59E0B', color: 'white', padding: '4px 12px', fontSize: '10px', fontWeight: '800', borderBottomLeftRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Timer size={10} />
-                    {countdown.label.includes('vence en') ? countdown.label.split('vence en')[1].trim() : countdown.status.toUpperCase()}
+                    {countdown.label.includes('\n')
+                        ? countdown.label.split('\n').slice(-1)[0].replace('Faltan ', '').replace(' días', ' días para próximo aporte')
+                        : countdown.label.includes('vence en')
+                            ? countdown.label.split('vence en')[1].trim()
+                            : countdown.status.toUpperCase()}
                 </div>
             )}
 

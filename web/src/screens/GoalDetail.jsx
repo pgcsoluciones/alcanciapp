@@ -204,6 +204,30 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
     };
 
     const freqLabel = (goal.frequency || 'Mensual').toLowerCase();
+    const targetDate = (() => {
+        if (!goal?.created_at || !goal?.duration_months) return null;
+
+        const start = new Date(goal.created_at);
+        if (Number.isNaN(start.getTime())) return null;
+
+        const result = new Date(start);
+        const originalDay = start.getDate();
+        const targetMonth = start.getMonth() + Number(goal.duration_months || 0);
+        const targetYear = start.getFullYear();
+        const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+        result.setFullYear(targetYear, targetMonth, Math.min(originalDay, lastDayOfTargetMonth));
+        return result;
+    })();
+
+    const targetDateLabel = targetDate
+        ? new Intl.DateTimeFormat('es-DO', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }).format(targetDate)
+        : null;
+
     const IconComponent = iconMap[goal.icon] || Target;
 
     return (
@@ -225,7 +249,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>Reloj de Disciplina</div>
-                            <div style={{ fontSize: '14px', fontWeight: '800' }}>{countdown.label}</div>
+                            <div style={{ fontSize: '14px', fontWeight: '800', whiteSpace: 'pre-line', lineHeight: '1.35' }}>{countdown.label}</div>
                         </div>
                     </div>
                 )}
@@ -250,10 +274,13 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '28px', fontWeight: '900', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                {fmtPigCoin(pigCoins).replace(' 🐷', '')} <span style={{ fontSize: '18px' }}>🐷</span>
+                            <div style={{ fontSize: '28px', fontWeight: '900', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                <span>{fmtPigCoin(pigCoins).replace(' 🐷', '')}</span>
+                                <span style={{ fontSize: '18px', color: '#9CA3AF', fontWeight: '800' }}>de</span>
+                                <span>{fmtPigCoin(getPeriodsTotal(goal)).replace(' 🐷', '')}</span>
+                                <span style={{ fontSize: '18px' }}>🐷</span>
                             </div>
-                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total PigCoins</div>
+                            <div style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PigCoins acumulados</div>
                         </div>
                     </div>
 
@@ -280,6 +307,17 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                                         >
                                             Ocultar montos
                                         </button>
+                                    )}
+
+                                    {targetDateLabel && (
+                                        <div style={{ marginTop: '12px' }}>
+                                            <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                                Fecha establecida
+                                            </div>
+                                            <div style={{ fontSize: '14px', fontWeight: '800', color: '#111827', lineHeight: '1.3' }}>
+                                                {targetDateLabel}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
@@ -347,7 +385,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                     <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #F3F4F6', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                             <Coins size={18} color="#10B981" />
-                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Acumulación Actual</h3>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#111827' }}>Cuota actual</h3>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -366,9 +404,14 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                             </div>
 
                             <div>
-                                <p style={{ margin: '0', fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>
-                                    Llevas ahorrados <strong style={{ color: '#111827' }}>{fmtPigCoin(pigProg.current)}</strong> de este PigCoin.
-                                </p>
+                                <div>
+                                    <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#4B5563', lineHeight: '1.4' }}>
+                                        Has completado <strong style={{ color: '#111827' }}>{fmtPigCoin(pigProg.current)}</strong> de <strong style={{ color: '#111827' }}>1.00 🐷</strong> en esta cuota.
+                                    </p>
+                                    <p style={{ margin: '0', fontSize: '12px', color: '#6B7280', lineHeight: '1.4' }}>
+                                        Te faltan <strong style={{ color: '#111827' }}>{fmtPigCoin(Math.max(0, 1 - pigProg.current))}</strong> para completarla.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -377,7 +420,7 @@ export default function GoalDetail({ goalId, isUnlocked, onUnlock, onHideAmounts
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <TrendingUp size={16} color="#9CA3AF" />
-                                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600' }}>Cuota {freqLabel}:</span>
+                                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600' }}>Referencia de esta cuota:</span>
                             </div>
                             <span style={{ fontSize: '14px', fontWeight: '800', color: '#111827' }}>
                                 {isUnlocked ? fmtRD(quota, goal.currency) : `1.00 🐷`}

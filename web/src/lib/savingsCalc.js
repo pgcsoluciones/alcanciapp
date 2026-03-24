@@ -69,6 +69,54 @@ export function getPigCoinProgress(goal, transactions) {
  * @param {Array} transactions
  * @returns {{ label: string, totalSeconds: number, status: string }}
  */
+function addCalendarPeriods(startDate, periods, frequency) {
+    const base = new Date(startDate);
+    const result = new Date(base);
+    const freq = (frequency || 'Mensual').toLowerCase();
+
+    if (freq.includes('diario')) {
+        result.setDate(base.getDate() + periods);
+        return result;
+    }
+
+    if (freq.includes('semanal')) {
+        result.setDate(base.getDate() + (periods * 7));
+        return result;
+    }
+
+    if (freq.includes('quincenal')) {
+        result.setDate(base.getDate() + (periods * 15));
+        return result;
+    }
+
+    const originalDay = base.getDate();
+    const targetMonth = base.getMonth() + periods;
+    const targetYear = base.getFullYear();
+
+    const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    result.setFullYear(targetYear, targetMonth, Math.min(originalDay, lastDayOfTargetMonth));
+    return result;
+}
+
+function formatDateEs(date) {
+    return new Intl.DateTimeFormat('es-DO', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).format(date);
+}
+
+function getRemainingCalendarText(now, dueDate) {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const due = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const diffDays = Math.ceil((due.getTime() - today.getTime()) / msPerDay);
+
+    if (diffDays <= 0) return 'Vence hoy';
+    if (diffDays === 1) return 'Falta 1 día';
+    return `Faltan ${diffDays} días`;
+}
+
 export function getCountdownStatus(goal, transactions) {
     if (!goal?.created_at) {
         return { label: 'Iniciando...', totalSeconds: 0, status: 'idle' };
@@ -89,13 +137,6 @@ export function getCountdownStatus(goal, transactions) {
         return { label: 'Iniciando...', totalSeconds: 0, status: 'idle' };
     }
 
-    const freq = (goal.frequency || 'Mensual').toLowerCase();
-
-    let msInPeriod = 30.42 * 24 * 60 * 60 * 1000;
-    if (freq.includes('quincenal')) msInPeriod = 15.21 * 24 * 60 * 60 * 1000;
-    if (freq.includes('semanal')) msInPeriod = 7 * 24 * 60 * 60 * 1000;
-    if (freq.includes('diario')) msInPeriod = 1 * 24 * 60 * 60 * 1000;
-
     const totalPeriods = getPeriodsTotal(goal);
     const periodsCompleted = getPeriodsCompleted(goal, transactions);
     const periodsElapsed = getPeriodsElapsed(goal);
@@ -104,47 +145,36 @@ export function getCountdownStatus(goal, transactions) {
         return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
     }
 
-    // La próxima cuota esperada es la siguiente que aún no se ha completado
-    const nextDuePeriod = periodsCompleted + 1;
+    const nextDuePeriod = periodsElapsed + 1;
 
     if (totalPeriods > 0 && nextDuePeriod > totalPeriods) {
         return { label: 'Meta alcanzada con éxito 🏆', totalSeconds: 0, status: 'completed' };
     }
 
-    const nextDueDate = new Date(start.getTime() + nextDuePeriod * msInPeriod);
+    const nextDueDate = addCalendarPeriods(start, nextDuePeriod, goal.frequency);
     const now = new Date();
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dueDay = new Date(nextDueDate.getFullYear(), nextDueDate.getMonth(), nextDueDate.getDate());
+
     const diffMs = nextDueDate.getTime() - now.getTime();
-
     const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
-    const d = Math.floor(totalSeconds / (24 * 3600));
-    const h = Math.floor((totalSeconds % (24 * 3600)) / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
 
-    const futureTimeStr = d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`;
+    const dateText = formatDateEs(nextDueDate);
+    const remainingText = getRemainingCalendarText(now, nextDueDate);
 
-    const overdueSeconds = Math.max(0, Math.floor(Math.abs(diffMs) / 1000));
-    const od = Math.floor(overdueSeconds / (24 * 3600));
-    const oh = Math.floor((overdueSeconds % (24 * 3600)) / 3600);
-    const om = Math.floor((overdueSeconds % 3600) / 60);
-
-    const overdueTimeStr = od > 0 ? `${od}d ${oh}h` : `${oh}h ${om}m`;
-
-    const isSameDay =
-        nextDueDate.getFullYear() === now.getFullYear() &&
-        nextDueDate.getMonth() === now.getMonth() &&
-        nextDueDate.getDate() === now.getDate();
-
-    if (periodsCompleted < periodsElapsed) {
+    if (periodsCompleted < periodsElapsed && dueDay < today) {
+        const overdueDays = Math.ceil((today.getTime() - dueDay.getTime()) / (24 * 60 * 60 * 1000));
         return {
-            label: `Atrasada: tu aporte ${getFreqLabel(goal.frequency)} va vencido por ${overdueTimeStr}`,
+            label: `Atrasada. Tu cuota venció el ${dateText}. Hace ${overdueDays} día${overdueDays === 1 ? '' : 's'}.`,
             totalSeconds: 0,
             status: 'behind'
         };
     }
 
-    if (isSameDay || diffMs <= 0) {
+    if (dueDay.getTime() === today.getTime()) {
         return {
-            label: `Hoy toca tu próximo aporte ${getFreqLabel(goal.frequency)}`,
+            label: `Hoy vence tu cuota (${dateText}).`,
             totalSeconds: 0,
             status: 'due'
         };
@@ -152,14 +182,14 @@ export function getCountdownStatus(goal, transactions) {
 
     if (rhythm.status === 'ahead') {
         return {
-            label: `Vas adelantado. Tu próximo aporte vence en ${futureTimeStr}`,
+            label: `Adelantado\nPróxima cuota: ${dateText}\n${remainingText}`,
             totalSeconds,
             status: 'on_track'
         };
     }
 
     return {
-        label: `Tu próximo aporte vence en ${futureTimeStr}`,
+        label: `Próxima cuota: ${dateText}. ${remainingText}.`,
         totalSeconds,
         status: 'on_track'
     };
