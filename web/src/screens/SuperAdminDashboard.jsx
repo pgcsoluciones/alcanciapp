@@ -232,6 +232,13 @@ function translateCodeStatus(value) {
   return value || '—'
 }
 
+function translateAccessState(value) {
+  if (value === 'enabled') return 'Habilitado'
+  if (value === 'locked') return 'Bloqueado'
+  if (value === 'sponsored') return 'Patrocinado'
+  return value || '—'
+}
+
 function MiniStat({ label, value, tone = 'neutral' }) {
   const palette = {
     neutral: { bg: '#ffffff', border: '#e5e7eb', text: '#0f172a', label: '#64748b' },
@@ -1262,6 +1269,522 @@ function CodesSection({ token }) {
   )
 }
 
+function SettingsSection({ token }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [settings, setSettings] = useState(null)
+  const [plans, setPlans] = useState([])
+  const [features, setFeatures] = useState([])
+  const [featureForm, setFeatureForm] = useState({})
+  const [savingKey, setSavingKey] = useState('')
+
+  const loadAll = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+      }
+
+      const [settingsRes, plansRes, featuresRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/v1/superadmin/settings`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/superadmin/plans`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/superadmin/features`, { headers }),
+      ])
+
+      const settingsJson = await settingsRes.json().catch(() => ({}))
+      const plansJson = await plansRes.json().catch(() => ({}))
+      const featuresJson = await featuresRes.json().catch(() => ({}))
+
+      if (!settingsRes.ok || !settingsJson?.ok) {
+        throw new Error(settingsJson?.error || 'No se pudo cargar la configuración')
+      }
+
+      if (!plansRes.ok || !plansJson?.ok) {
+        throw new Error(plansJson?.error || 'No se pudieron cargar los planes')
+      }
+
+      if (!featuresRes.ok || !featuresJson?.ok) {
+        throw new Error(featuresJson?.error || 'No se pudieron cargar las funciones por plan')
+      }
+
+      const nextSettings = settingsJson.settings || {}
+      const nextPlans = Array.isArray(plansJson.items) ? plansJson.items : []
+      const nextFeatures = Array.isArray(featuresJson.items) ? featuresJson.items : []
+
+      setSettings(nextSettings)
+      setPlans(nextPlans)
+      setFeatures(nextFeatures)
+
+      const nextForm = {}
+      nextFeatures.forEach((feature) => {
+        ;(feature.plan_flags || []).forEach((flag) => {
+          const formKey = `${feature.code}::${flag.plan_code}`
+          nextForm[formKey] = {
+            feature_code: feature.code,
+            plan_code: flag.plan_code,
+            access_state: flag.access_state || 'locked',
+            cta_label: flag.cta_label || '',
+            badge_label: flag.badge_label || '',
+          }
+        })
+      })
+      setFeatureForm(nextForm)
+    } catch (err) {
+      setError(err.message || 'Error cargando la configuración')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadAll()
+  }, [token])
+
+  const settingsItems = useMemo(
+    () => [
+      {
+        key: 'registration_mode',
+        label: 'Modo de registro',
+        value: settings?.registration_mode?.mode || 'no definido',
+        description: 'Define la modalidad general de registro disponible para nuevos usuarios.',
+      },
+      {
+        key: 'purchase_code_mode',
+        label: 'Código de compra',
+        value: settings?.purchase_code_mode?.mode || 'no definido',
+        description: 'Controla si el código es desactivado, opcional o requerido en el registro.',
+      },
+      {
+        key: 'payments_mode',
+        label: 'Cobros / pagos',
+        value: settings?.payments_mode?.mode || 'no definido',
+        description: 'Base para activar la futura operación de cobros y validaciones de pago.',
+      },
+      {
+        key: 'premium_cta',
+        label: 'CTA Premium',
+        value: settings?.premium_cta?.enabled ? 'activo' : 'inactivo',
+        description: 'Permite mostrar el llamado visual para actualizar a Premium.',
+      },
+      {
+        key: 'ads_mode',
+        label: 'Anuncios',
+        value: settings?.ads_mode?.enabled ? 'activo' : 'inactivo',
+        description: 'Controla la disponibilidad del modelo con anuncios en planes correspondientes.',
+      },
+      {
+        key: 'sponsored_mode',
+        label: 'Patrocinado',
+        value: settings?.sponsored_mode?.enabled ? 'activo' : 'inactivo',
+        description: 'Prepara la lógica del modo patrocinado dentro del modelo freemium.',
+      },
+      {
+        key: 'new_user_alerts',
+        label: 'Alertas de nuevos usuarios',
+        value: settings?.new_user_alerts?.enabled ? 'activas' : 'inactivas',
+        description: 'Define si las alertas administrativas por nuevos registros están encendidas.',
+      },
+      {
+        key: 'plans_page',
+        label: 'Página de planes',
+        value: settings?.plans_page?.url || 'sin URL configurada',
+        description: 'URL de destino usada por CTAs de actualización o planes.',
+      },
+    ],
+    [settings]
+  )
+
+  const accessTone = (state) => {
+    if (state === 'enabled') return { bg: '#ecfdf5', bd: '#a7f3d0', tx: '#065f46' }
+    if (state === 'sponsored') return { bg: '#eff6ff', bd: '#bfdbfe', tx: '#1d4ed8' }
+    return { bg: '#f8fafc', bd: '#cbd5e1', tx: '#475569' }
+  }
+
+  const updateFlagField = (featureCode, planCode, field, value) => {
+    const formKey = `${featureCode}::${planCode}`
+    setFeatureForm((prev) => ({
+      ...prev,
+      [formKey]: {
+        ...(prev[formKey] || {
+          feature_code: featureCode,
+          plan_code: planCode,
+          access_state: 'locked',
+          cta_label: '',
+          badge_label: '',
+        }),
+        [field]: value,
+      },
+    }))
+  }
+
+  const handleSaveFeatureFlag = async (featureCode, planCode) => {
+    const formKey = `${featureCode}::${planCode}`
+    const payload = featureForm[formKey]
+
+    if (!payload) return
+
+    try {
+      setSavingKey(formKey)
+      setError('')
+      setSuccess('')
+
+      const res = await fetch(`${API_BASE_URL}/api/v1/superadmin/features/flag`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          feature_code: payload.feature_code,
+          plan_code: payload.plan_code,
+          access_state: payload.access_state,
+          cta_label: payload.cta_label,
+          badge_label: payload.badge_label,
+        }),
+      })
+
+      const json = await res.json().catch(() => ({}))
+
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || 'No se pudo guardar la función por plan')
+      }
+
+      setFeatures((prev) =>
+        prev.map((feature) =>
+          feature.code !== featureCode
+            ? feature
+            : {
+                ...feature,
+                plan_flags: (feature.plan_flags || []).map((flag) =>
+                  flag.plan_code !== planCode
+                    ? flag
+                    : {
+                        ...flag,
+                        access_state: json?.item?.access_state || payload.access_state,
+                        cta_label: json?.item?.cta_label ?? payload.cta_label,
+                        badge_label: json?.item?.badge_label ?? payload.badge_label,
+                      }
+                ),
+              }
+        )
+      )
+
+      setFeatureForm((prev) => ({
+        ...prev,
+        [formKey]: {
+          ...(prev[formKey] || {}),
+          access_state: json?.item?.access_state || payload.access_state,
+          cta_label: json?.item?.cta_label ?? payload.cta_label,
+          badge_label: json?.item?.badge_label ?? payload.badge_label,
+        },
+      }))
+
+      setSuccess(`Configuración guardada para ${featureCode} · ${planCode}`)
+    } catch (err) {
+      setError(err.message || 'Error guardando función por plan')
+    } finally {
+      setSavingKey('')
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div>
+        <div style={{ fontSize: 30, fontWeight: 800 }}>Configuración general</div>
+        <div style={{ fontSize: 14, color: '#6b7280', marginTop: 8 }}>
+          Vista administrativa conectada a la fundación real de Super Admin: settings, planes y funciones por plan.
+        </div>
+      </div>
+
+      {loading ? (
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 18,
+            padding: 24,
+            fontWeight: 700,
+            color: '#334155',
+          }}
+        >
+          Cargando configuración...
+        </div>
+      ) : error ? (
+        <Notice tone="warning">{error}</Notice>
+      ) : (
+        <>
+          <Notice tone="neutral">
+            Esta fase ya conecta lectura real de ajustes globales, catálogo de planes y control editable de funciones por plan.
+          </Notice>
+
+          {success ? <Notice tone="success">{success}</Notice> : null}
+
+          <SectionCard
+            title="Ajustes globales"
+            subtitle="Resumen actual de los settings principales sembrados en backend."
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 18,
+              }}
+            >
+              {settingsItems.map((item) => (
+                <div
+                  key={item.key}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 16,
+                    padding: 16,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{item.label}</div>
+                  <div style={{ fontSize: 14, color: '#64748b' }}>{item.description}</div>
+                  <div
+                    style={{
+                      background: '#fff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 14,
+                      padding: 14,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                      marginTop: 4,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#64748b' }}>VALOR ACTUAL</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', wordBreak: 'break-word' }}>
+                      {String(item.value)}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>Clave interna: {item.key}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Planes del modelo freemium"
+            subtitle="Catálogo base de planes sembrado en la fundación del Super Admin."
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: 18,
+              }}
+            >
+              {plans.map((plan) => {
+                const meta = (() => {
+                  try {
+                    return plan?.metadata_json ? JSON.parse(plan.metadata_json) : {}
+                  } catch {
+                    return {}
+                  }
+                })()
+
+                return (
+                  <div
+                    key={plan.code}
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 18,
+                      padding: 18,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>{plan.name}</div>
+                      <div
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          background: plan.is_active ? '#ecfdf5' : '#f8fafc',
+                          border: `1px solid ${plan.is_active ? '#a7f3d0' : '#cbd5e1'}`,
+                          color: plan.is_active ? '#065f46' : '#475569',
+                        }}
+                      >
+                        {plan.is_active ? 'activo' : 'inactivo'}
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: 13, color: '#64748b' }}>Código: {plan.code}</div>
+                    <div style={{ fontSize: 13, color: '#64748b' }}>
+                      Tipo de cobro: {plan.billing_type || 'no definido'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#64748b' }}>
+                      Orden visual: {String(plan.sort_order ?? 'n/d')}
+                    </div>
+
+                    {meta?.monthly_price ? (
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                        Precio mensual: {meta.currency || 'USD'} {meta.monthly_price}
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title="Funciones por plan"
+            subtitle="Edita el acceso, CTA y badge de cada función según el plan."
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {features.map((feature) => (
+                <div
+                  key={feature.code}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 18,
+                    padding: 18,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 14,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>{feature.name}</div>
+                    <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
+                      {feature.description || 'Sin descripción'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>
+                      Código: {feature.code} · Categoría: {feature.category || 'general'}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gap: 12,
+                    }}
+                  >
+                    {(feature.plan_flags || []).map((flag) => {
+                      const formKey = `${feature.code}::${flag.plan_code}`
+                      const current = featureForm[formKey] || {
+                        feature_code: feature.code,
+                        plan_code: flag.plan_code,
+                        access_state: flag.access_state || 'locked',
+                        cta_label: flag.cta_label || '',
+                        badge_label: flag.badge_label || '',
+                      }
+                      const tone = accessTone(current.access_state)
+                      const isSaving = savingKey === formKey
+
+                      return (
+                        <div
+                          key={`${feature.code}-${flag.plan_code}`}
+                          style={{
+                            background: tone.bg,
+                            border: `1px solid ${tone.bd}`,
+                            borderRadius: 14,
+                            padding: 14,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 12,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                              {flag.plan_name}
+                            </div>
+                            <div
+                              style={{
+                                alignSelf: 'flex-start',
+                                padding: '5px 9px',
+                                borderRadius: 999,
+                                fontSize: 12,
+                                fontWeight: 800,
+                                background: '#fff',
+                                border: `1px solid ${tone.bd}`,
+                                color: tone.tx,
+                              }}
+                            >
+                              {translateAccessState(current.access_state)}
+                            </div>
+                          </div>
+
+                          <Field label="Estado de acceso">
+                            <SelectInput
+                              value={current.access_state}
+                              onChange={(e) =>
+                                updateFlagField(feature.code, flag.plan_code, 'access_state', e.target.value)
+                              }
+                            >
+                              <option value="enabled">enabled</option>
+                              <option value="locked">locked</option>
+                              <option value="sponsored">sponsored</option>
+                            </SelectInput>
+                          </Field>
+
+                          <Field label="CTA label" hint="Texto del llamado visual para este plan.">
+                            <TextInput
+                              type="text"
+                              value={current.cta_label}
+                              onChange={(e) =>
+                                updateFlagField(feature.code, flag.plan_code, 'cta_label', e.target.value)
+                              }
+                              placeholder="Ej: Actualizar a Premium"
+                            />
+                          </Field>
+
+                          <Field label="Badge label" hint="Etiqueta visible sobre la función o el plan.">
+                            <TextInput
+                              type="text"
+                              value={current.badge_label}
+                              onChange={(e) =>
+                                updateFlagField(feature.code, flag.plan_code, 'badge_label', e.target.value)
+                              }
+                              placeholder="Ej: Premium o Patrocinado"
+                            />
+                          </Field>
+
+                          <div style={{ fontSize: 12, color: '#475569' }}>
+                            Clave: {feature.code} · {flag.plan_code}
+                          </div>
+
+                          <PrimaryButton
+                            onClick={() => handleSaveFeatureFlag(feature.code, flag.plan_code)}
+                            disabled={isSaving}
+                          >
+                            {isSaving ? 'Guardando...' : 'Guardar'}
+                          </PrimaryButton>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <SecondaryButton onClick={loadAll}>
+              Recargar configuración
+            </SecondaryButton>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function SuperAdminDashboard({ token, onLogout }) {
   const [section, setSection] = useState('dashboard')
   const [loading, setLoading] = useState(true)
@@ -1322,6 +1845,8 @@ function SuperAdminDashboard({ token, onLogout }) {
         <AdminUsersSection token={token} />
       ) : section === 'codes' || section === 'Códigos' ? (
         <CodesSection token={token} />
+      ) : section === 'settings' || section === 'Configuración' ? (
+        <SettingsSection token={token} />
       ) : section !== 'dashboard' ? (
         <div
           style={{
