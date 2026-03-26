@@ -42,7 +42,16 @@ export async function handleProfile(request, env) {
 
         if (method === 'GET' && path === '/api/v1/profile') {
             const profile = await env.DB.prepare(
-                "SELECT user_id, name, email, avatar FROM user_profiles WHERE user_id = ? LIMIT 1"
+                `SELECT
+                    up.user_id,
+                    up.name,
+                    up.email,
+                    up.avatar,
+                    u.current_plan_code
+                 FROM users u
+                 LEFT JOIN user_profiles up ON up.user_id = u.id
+                 WHERE u.id = ?
+                 LIMIT 1`
             ).bind(userId).first();
 
             return jsonResponse({
@@ -51,7 +60,8 @@ export async function handleProfile(request, env) {
                     id: userId,
                     name: profile?.name || '',
                     email: profile?.email || '',
-                    avatar: profile?.avatar || '1.png'
+                    avatar: profile?.avatar || '1.png',
+                    current_plan_code: profile?.current_plan_code || 'free'
                 }
             }, 200, corsHeaders);
         }
