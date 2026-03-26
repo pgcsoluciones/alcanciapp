@@ -13,6 +13,15 @@ export default function Profile({ user, onSave, onBack }) {
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
+    const planCode = String(user?.current_plan_code || 'free').toLowerCase();
+
+    const getPlanLabel = (code) => {
+        if (code === 'premium') return 'Premium';
+        if (code === 'sponsored' || code === 'patrocinado') return 'Patrocinado';
+        if (code === 'promo' || code === 'promocional') return 'Promocional';
+        return 'Free';
+    };
+
     const handleSave = async () => {
         setErrorMsg('');
         setIsSaving(true);
@@ -101,6 +110,27 @@ export default function Profile({ user, onSave, onBack }) {
         transition: 'border-color 0.2s',
     };
 
+    const planBoxStyle = {
+        backgroundColor: '#F9FAFB',
+        border: '1px solid #E5E7EB',
+        borderRadius: '12px',
+        padding: '14px 16px',
+        marginBottom: '20px',
+    };
+
+    const planLabelStyle = {
+        fontSize: '13px',
+        fontWeight: '600',
+        color: '#6B7280',
+        marginBottom: '6px',
+    };
+
+    const planValueStyle = {
+        fontSize: '16px',
+        fontWeight: '700',
+        color: '#111827',
+    };
+
     const btnSaveStyle = {
         width: '100%',
         padding: '14px',
@@ -118,97 +148,125 @@ export default function Profile({ user, onSave, onBack }) {
         marginTop: '10px',
     };
 
+    const btnBackStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        color: '#10B981',
+        marginBottom: '20px',
+        cursor: 'pointer',
+        fontWeight: '600',
+    };
+
     return (
         <div style={containerStyle}>
-            <div style={{ maxWidth: '440px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                <button onClick={onBack} style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#6B7280' }}>
-                    <ArrowLeft size={20} />
-                </button>
-                <h1 style={{ fontSize: '20px', margin: 0, fontWeight: 'bold' }}>Mi Perfil</h1>
+            <div style={{ maxWidth: '440px', margin: '0 auto 16px' }}>
+                <div style={btnBackStyle} onClick={onBack}>
+                    <ArrowLeft size={18} />
+                    Volver
+                </div>
             </div>
 
             <div style={cardStyle}>
-                <div style={avatarContainerStyle} onClick={() => setShowAvatarPicker(true)}>
+                <div style={avatarContainerStyle}>
                     <img
-                        src={ASSET.avatar(selectedAvatar, 256)}
+                        src={ASSET.avatar(selectedAvatar)}
                         alt="Avatar"
                         style={avatarStyle}
                     />
-                    <div style={editIconStyle}>
+                    <div style={editIconStyle} onClick={() => setShowAvatarPicker(!showAvatarPicker)}>
                         <Camera size={16} />
                     </div>
                 </div>
 
                 {showAvatarPicker && (
-                    <div style={{ marginBottom: '24px', border: '1.5px solid #A7F3D0', borderRadius: '16px', padding: '16px', background: '#F0FDF4' }}>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#059669', marginBottom: '12px' }}>Elige tu avatar:</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                            {AVATAR_FILES.map(file => (
-                                <img
-                                    key={file}
-                                    src={ASSET.avatar(file, 128)}
-                                    alt="Avatar"
-                                    onClick={() => {
-                                        setSelectedAvatar(file);
-                                        setShowAvatarPicker(false);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        aspectRatio: '1/1',
-                                        objectFit: 'cover',
-                                        cursor: 'pointer',
-                                        borderRadius: '50%',
-                                        border: selectedAvatar === file ? '2px solid #10B981' : '1px solid #F3F4F6',
-                                        padding: '2px'
-                                    }}
-                                />
-                            ))}
-                        </div>
-                        <button
-                            onClick={() => setShowAvatarPicker(false)}
-                            style={{ width: '100%', marginTop: '12px', padding: '12px', border: 'none', background: '#F3F4F6', borderRadius: '12px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
-                        >
-                            Cancelar
-                        </button>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '12px',
+                        marginBottom: '20px'
+                    }}>
+                        {AVATAR_FILES.map((avatarFile) => (
+                            <img
+                                key={avatarFile}
+                                src={ASSET.avatar(avatarFile)}
+                                alt={avatarFile}
+                                onClick={() => {
+                                    setSelectedAvatar(avatarFile);
+                                    setShowAvatarPicker(false);
+                                }}
+                                style={{
+                                    width: '100%',
+                                    borderRadius: '12px',
+                                    border: selectedAvatar === avatarFile ? '3px solid #10B981' : '2px solid transparent',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        ))}
                     </div>
                 )}
 
-                <div>
-                    <label style={labelStyle}>Nombre completo</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Jhon Doe"
-                        style={inputStyle}
-                    />
+                <label style={labelStyle}>Nombre</label>
+                <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    style={inputStyle}
+                    placeholder="Tu nombre"
+                />
 
-                    <label style={labelStyle}>Correo electrónico</label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="jhon@ejemplo.com"
-                        style={inputStyle}
-                    />
+                <label style={labelStyle}>Correo electrónico</label>
+                <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={inputStyle}
+                    placeholder="Tu correo"
+                />
 
-                    {success && (
-                        <div style={{ backgroundColor: '#ECFDF5', color: '#065F46', padding: '12px', borderRadius: '12px', marginBottom: '16px', fontSize: '14px', textAlign: 'center', fontWeight: '700' }}>
-                            ✅ ¡Perfil actualizado correctamente!
-                        </div>
-                    )}
-
-                    {errorMsg && (
-                        <div style={{ backgroundColor: '#FEF2F2', color: '#DC2626', padding: '12px', borderRadius: '12px', marginBottom: '16px', fontSize: '13px', border: '1px solid #FCA5A5' }}>
-                            {errorMsg}
-                        </div>
-                    )}
-
-                    <button style={{ ...btnSaveStyle, opacity: isSaving ? 0.7 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }} onClick={handleSave} disabled={isSaving}>
-                        <Save size={20} />
-                        {isSaving ? 'Guardando...' : 'Guardar cambios'}
-                    </button>
+                <div style={planBoxStyle}>
+                    <div style={planLabelStyle}>Plan actual</div>
+                    <div style={planValueStyle}>{getPlanLabel(planCode)}</div>
                 </div>
+
+                {success && (
+                    <div style={{
+                        color: '#065F46',
+                        backgroundColor: '#D1FAE5',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        marginBottom: '16px',
+                        fontSize: '14px'
+                    }}>
+                        Perfil actualizado correctamente.
+                    </div>
+                )}
+
+                {errorMsg && (
+                    <div style={{
+                        color: '#991B1B',
+                        backgroundColor: '#FEE2E2',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        marginBottom: '16px',
+                        fontSize: '14px'
+                    }}>
+                        {errorMsg}
+                    </div>
+                )}
+
+                <button
+                    onClick={handleSave}
+                    style={{
+                        ...btnSaveStyle,
+                        opacity: isSaving ? 0.7 : 1,
+                        cursor: isSaving ? 'not-allowed' : 'pointer'
+                    }}
+                    disabled={isSaving}
+                >
+                    <Save size={18} />
+                    {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
             </div>
         </div>
     );
