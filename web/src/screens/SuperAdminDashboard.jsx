@@ -239,6 +239,32 @@ function translateAccessState(value) {
   return value || '—'
 }
 
+function featureHelpText(code, fallbackDescription) {
+  const map = {
+    coach_invites:
+      'Permite o bloquea que el ahorrante invite un coach o mentor para acompañar su disciplina de ahorro.',
+    goal_history_export:
+      'Permite o bloquea que el ahorrante descargue o exporte su historial de aportes y movimientos.',
+    advanced_reports:
+      'Permite o bloquea el acceso a reportes estadísticos y métricas más completas sobre el progreso del ahorro.',
+    custom_reminders:
+      'Permite o bloquea recordatorios más personalizados para ayudar al ahorrante a mantenerse al día.',
+    priority_support:
+      'Permite o bloquea el acceso a atención prioritaria o soporte preferencial.',
+    sponsored_advanced_tools:
+      'Permite activar funciones especiales disponibles dentro del plan patrocinado.',
+  }
+
+  return map[code] || fallbackDescription || 'Configura si esta función estará disponible, bloqueada o patrocinada según el plan.'
+}
+
+function translatePlanCode(code, fallbackName) {
+  if (code === 'free') return 'Básico Free'
+  if (code === 'sponsored') return 'Avanzado Patrocinado'
+  if (code === 'premium') return 'Full Premium'
+  return fallbackName || code || 'Plan'
+}
+
 function MiniStat({ label, value, tone = 'neutral' }) {
   const palette = {
     neutral: { bg: '#ffffff', border: '#e5e7eb', text: '#0f172a', label: '#64748b' },
@@ -1278,6 +1304,7 @@ function SettingsSection({ token }) {
   const [features, setFeatures] = useState([])
   const [featureForm, setFeatureForm] = useState({})
   const [savingKey, setSavingKey] = useState('')
+  const [expandedFeatureCode, setExpandedFeatureCode] = useState('')
 
   const loadAll = async () => {
     try {
@@ -1332,6 +1359,10 @@ function SettingsSection({ token }) {
         })
       })
       setFeatureForm(nextForm)
+
+      if (!expandedFeatureCode && nextFeatures[0]?.code) {
+        setExpandedFeatureCode(nextFeatures[0].code)
+      }
     } catch (err) {
       setError(err.message || 'Error cargando la configuración')
     } finally {
@@ -1365,7 +1396,7 @@ function SettingsSection({ token }) {
       },
       {
         key: 'premium_cta',
-        label: 'CTA Premium',
+        label: 'Llamado a Premium',
         value: settings?.premium_cta?.enabled ? 'activo' : 'inactivo',
         description: 'Permite mostrar el llamado visual para actualizar a Premium.',
       },
@@ -1377,7 +1408,7 @@ function SettingsSection({ token }) {
       },
       {
         key: 'sponsored_mode',
-        label: 'Patrocinado',
+        label: 'Modo patrocinado',
         value: settings?.sponsored_mode?.enabled ? 'activo' : 'inactivo',
         description: 'Prepara la lógica del modo patrocinado dentro del modelo freemium.',
       },
@@ -1391,7 +1422,7 @@ function SettingsSection({ token }) {
         key: 'plans_page',
         label: 'Página de planes',
         value: settings?.plans_page?.url || 'sin URL configurada',
-        description: 'URL de destino usada por CTAs de actualización o planes.',
+        description: 'URL de destino usada por los botones de actualización o consulta de planes.',
       },
     ],
     [settings]
@@ -1482,7 +1513,7 @@ function SettingsSection({ token }) {
         },
       }))
 
-      setSuccess(`Configuración guardada para ${featureCode} · ${planCode}`)
+      setSuccess(`Configuración guardada para ${featureHelpText(featureCode, featureCode)}`)
     } catch (err) {
       setError(err.message || 'Error guardando función por plan')
     } finally {
@@ -1490,12 +1521,16 @@ function SettingsSection({ token }) {
     }
   }
 
+  const toggleFeatureAccordion = (featureCode) => {
+    setExpandedFeatureCode((current) => (current === featureCode ? '' : featureCode))
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
         <div style={{ fontSize: 30, fontWeight: 800 }}>Configuración general</div>
         <div style={{ fontSize: 14, color: '#6b7280', marginTop: 8 }}>
-          Vista administrativa conectada a la fundación real de Super Admin: settings, planes y funciones por plan.
+          Aquí puedes revisar los ajustes globales, los planes y qué funciones estarán disponibles para cada tipo de usuario.
         </div>
       </div>
 
@@ -1517,14 +1552,14 @@ function SettingsSection({ token }) {
       ) : (
         <>
           <Notice tone="neutral">
-            Esta fase ya conecta lectura real de ajustes globales, catálogo de planes y control editable de funciones por plan.
+            Desde aquí puedes decidir qué funciones estarán disponibles, bloqueadas o patrocinadas según el plan del usuario.
           </Notice>
 
           {success ? <Notice tone="success">{success}</Notice> : null}
 
           <SectionCard
             title="Ajustes globales"
-            subtitle="Resumen actual de los settings principales sembrados en backend."
+            subtitle="Resumen actual de las configuraciones principales del sistema."
           >
             <div
               style={{
@@ -1573,7 +1608,7 @@ function SettingsSection({ token }) {
 
           <SectionCard
             title="Planes del modelo freemium"
-            subtitle="Catálogo base de planes sembrado en la fundación del Super Admin."
+            subtitle="Catálogo base de planes disponibles en el sistema."
           >
             <div
               style={{
@@ -1642,135 +1677,196 @@ function SettingsSection({ token }) {
 
           <SectionCard
             title="Funciones por plan"
-            subtitle="Edita el acceso, CTA y badge de cada función según el plan."
+            subtitle="Abre cada función para decidir si estará disponible, bloqueada o patrocinada según el plan."
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {features.map((feature) => (
-                <div
-                  key={feature.code}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 18,
-                    padding: 18,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 14,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>{feature.name}</div>
-                    <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
-                      {feature.description || 'Sin descripción'}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>
-                      Código: {feature.code} · Categoría: {feature.category || 'general'}
-                    </div>
-                  </div>
-
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {features.map((feature) => {
+                const isExpanded = expandedFeatureCode === feature.code
+                return (
                   <div
+                    key={feature.code}
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                      gap: 12,
+                      border: isExpanded ? '2px solid #14213d' : '1px solid #e2e8f0',
+                      borderRadius: 18,
+                      background: '#ffffff',
+                      overflow: 'hidden',
+                      boxShadow: isExpanded ? '0 12px 28px rgba(20, 33, 61, 0.08)' : 'none',
                     }}
                   >
-                    {(feature.plan_flags || []).map((flag) => {
-                      const formKey = `${feature.code}::${flag.plan_code}`
-                      const current = featureForm[formKey] || {
-                        feature_code: feature.code,
-                        plan_code: flag.plan_code,
-                        access_state: flag.access_state || 'locked',
-                        cta_label: flag.cta_label || '',
-                        badge_label: flag.badge_label || '',
-                      }
-                      const tone = accessTone(current.access_state)
-                      const isSaving = savingKey === formKey
+                    <button
+                      type="button"
+                      onClick={() => toggleFeatureAccordion(feature.code)}
+                      style={{
+                        width: '100%',
+                        border: 'none',
+                        background: isExpanded ? '#f8fafc' : '#ffffff',
+                        padding: 18,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 1fr) auto',
+                        alignItems: 'center',
+                        gap: 16,
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
+                          {feature.name}
+                        </div>
+                        <div style={{ fontSize: 14, color: '#64748b', marginTop: 6 }}>
+                          {featureHelpText(feature.code, feature.description)}
+                        </div>
+                      </div>
 
-                      return (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          justifySelf: 'end',
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#475569' }}>
+                          {isExpanded ? 'Ocultar opciones' : 'Ver opciones'}
+                        </div>
+                        <Chevron expanded={isExpanded} />
+                      </div>
+                    </button>
+
+                    {isExpanded ? (
+                      <div
+                        style={{
+                          padding: 18,
+                          borderTop: '1px solid #e5e7eb',
+                          background: '#f8fafc',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 14,
+                        }}
+                      >
+                        <Notice tone="neutral">
+                          Esta configuración afecta cómo se comporta esta función para cada tipo de plan dentro de la app.
+                        </Notice>
+
+                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                          Código interno: {feature.code} · Categoría: {feature.category || 'general'}
+                        </div>
+
                         <div
-                          key={`${feature.code}-${flag.plan_code}`}
                           style={{
-                            background: tone.bg,
-                            border: `1px solid ${tone.bd}`,
-                            borderRadius: 14,
-                            padding: 14,
-                            display: 'flex',
-                            flexDirection: 'column',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                             gap: 12,
                           }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                            <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
-                              {flag.plan_name}
-                            </div>
-                            <div
-                              style={{
-                                alignSelf: 'flex-start',
-                                padding: '5px 9px',
-                                borderRadius: 999,
-                                fontSize: 12,
-                                fontWeight: 800,
-                                background: '#fff',
-                                border: `1px solid ${tone.bd}`,
-                                color: tone.tx,
-                              }}
-                            >
-                              {translateAccessState(current.access_state)}
-                            </div>
-                          </div>
+                          {(feature.plan_flags || []).map((flag) => {
+                            const formKey = `${feature.code}::${flag.plan_code}`
+                            const current = featureForm[formKey] || {
+                              feature_code: feature.code,
+                              plan_code: flag.plan_code,
+                              access_state: flag.access_state || 'locked',
+                              cta_label: flag.cta_label || '',
+                              badge_label: flag.badge_label || '',
+                            }
+                            const tone = accessTone(current.access_state)
+                            const isSaving = savingKey === formKey
 
-                          <Field label="Estado de acceso">
-                            <SelectInput
-                              value={current.access_state}
-                              onChange={(e) =>
-                                updateFlagField(feature.code, flag.plan_code, 'access_state', e.target.value)
-                              }
-                            >
-                              <option value="enabled">enabled</option>
-                              <option value="locked">locked</option>
-                              <option value="sponsored">sponsored</option>
-                            </SelectInput>
-                          </Field>
+                            return (
+                              <div
+                                key={`${feature.code}-${flag.plan_code}`}
+                                style={{
+                                  background: tone.bg,
+                                  border: `1px solid ${tone.bd}`,
+                                  borderRadius: 14,
+                                  padding: 14,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 12,
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                                  <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                                    {translatePlanCode(flag.plan_code, flag.plan_name)}
+                                  </div>
+                                  <div
+                                    style={{
+                                      alignSelf: 'flex-start',
+                                      padding: '5px 9px',
+                                      borderRadius: 999,
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                      background: '#fff',
+                                      border: `1px solid ${tone.bd}`,
+                                      color: tone.tx,
+                                    }}
+                                  >
+                                    {translateAccessState(current.access_state)}
+                                  </div>
+                                </div>
 
-                          <Field label="CTA label" hint="Texto del llamado visual para este plan.">
-                            <TextInput
-                              type="text"
-                              value={current.cta_label}
-                              onChange={(e) =>
-                                updateFlagField(feature.code, flag.plan_code, 'cta_label', e.target.value)
-                              }
-                              placeholder="Ej: Actualizar a Premium"
-                            />
-                          </Field>
+                                <Field
+                                  label="Disponibilidad"
+                                  hint="Define si esta función estará disponible, bloqueada o como parte del plan patrocinado."
+                                >
+                                  <SelectInput
+                                    value={current.access_state}
+                                    onChange={(e) =>
+                                      updateFlagField(feature.code, flag.plan_code, 'access_state', e.target.value)
+                                    }
+                                  >
+                                    <option value="enabled">Habilitado</option>
+                                    <option value="locked">Bloqueado</option>
+                                    <option value="sponsored">Patrocinado</option>
+                                  </SelectInput>
+                                </Field>
 
-                          <Field label="Badge label" hint="Etiqueta visible sobre la función o el plan.">
-                            <TextInput
-                              type="text"
-                              value={current.badge_label}
-                              onChange={(e) =>
-                                updateFlagField(feature.code, flag.plan_code, 'badge_label', e.target.value)
-                              }
-                              placeholder="Ej: Premium o Patrocinado"
-                            />
-                          </Field>
+                                <Field
+                                  label="Texto del botón"
+                                  hint="Mensaje que verá el usuario cuando esta función muestre un llamado a la acción."
+                                >
+                                  <TextInput
+                                    type="text"
+                                    value={current.cta_label}
+                                    onChange={(e) =>
+                                      updateFlagField(feature.code, flag.plan_code, 'cta_label', e.target.value)
+                                    }
+                                    placeholder="Ej: Actualizar a Premium"
+                                  />
+                                </Field>
 
-                          <div style={{ fontSize: 12, color: '#475569' }}>
-                            Clave: {feature.code} · {flag.plan_code}
-                          </div>
+                                <Field
+                                  label="Etiqueta visible"
+                                  hint="Texto corto que identifica la función, por ejemplo Premium o Patrocinado."
+                                >
+                                  <TextInput
+                                    type="text"
+                                    value={current.badge_label}
+                                    onChange={(e) =>
+                                      updateFlagField(feature.code, flag.plan_code, 'badge_label', e.target.value)
+                                    }
+                                    placeholder="Ej: Premium o Patrocinado"
+                                  />
+                                </Field>
 
-                          <PrimaryButton
-                            onClick={() => handleSaveFeatureFlag(feature.code, flag.plan_code)}
-                            disabled={isSaving}
-                          >
-                            {isSaving ? 'Guardando...' : 'Guardar'}
-                          </PrimaryButton>
+                                <div style={{ fontSize: 12, color: '#475569' }}>
+                                  Clave interna: {feature.code} · {flag.plan_code}
+                                </div>
+
+                                <PrimaryButton
+                                  onClick={() => handleSaveFeatureFlag(feature.code, flag.plan_code)}
+                                  disabled={isSaving}
+                                >
+                                  {isSaving ? 'Guardando...' : 'Guardar'}
+                                </PrimaryButton>
+                              </div>
+                            )
+                          })}
                         </div>
-                      )
-                    })}
+                      </div>
+                    ) : null}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </SectionCard>
 
